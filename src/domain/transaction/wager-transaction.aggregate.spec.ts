@@ -5,9 +5,9 @@ import {
 } from './wager-transaction.aggregate';
 import { WagerTransactionKind, WagerTransactionStatus } from './wager-transaction-types';
 import { Money } from '../money';
-import { FailureCode } from '../failure/failure-code';
+import { FailureCode } from '../failure';
 import { InvalidTransactionStateError } from '../errors/domain.error';
-import { LedgerDirection } from '../ledger/ledger-types';
+import { LedgerDirection } from '../ledger';
 
 describe('WagerTransaction', () => {
   const baseProps = {

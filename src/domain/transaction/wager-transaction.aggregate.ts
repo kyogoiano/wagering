@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { Money, MoneyProps } from '../money';
+import { Money } from '../money';
 import { FailureCode } from '@domain/failure';
 import { LedgerDirection } from '@domain/ledger';
 import {

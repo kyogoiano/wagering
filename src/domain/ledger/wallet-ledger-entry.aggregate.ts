@@ -1,4 +1,3 @@
-import Decimal from 'decimal.js';
 import { Money } from '@domain/money';
 import {
   LedgerDirection,

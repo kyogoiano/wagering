@@ -1,6 +1,6 @@
-import { Money, MoneyProps } from '../money';
-import { WalletLedgerEntry } from '../ledger/wallet-ledger-entry.aggregate';
-import { LedgerDirection } from '../ledger/ledger-types';
+import { Money } from '../money';
+import { WalletLedgerEntry } from '@domain/ledger';
+import { LedgerDirection } from '@domain/ledger';
 import { InsufficientBalanceError, InvalidCurrencyError } from '../errors/domain.error';
 
 export interface WalletState {

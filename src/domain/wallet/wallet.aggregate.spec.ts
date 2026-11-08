@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { Wallet } from './wallet.aggregate';
 import { Money } from '../money';
 import { InsufficientBalanceError, InvalidCurrencyError } from '../errors/domain.error';
-import { LedgerDirection } from '../ledger/ledger-types';
+import { LedgerDirection } from '../ledger';
 
 describe('Wallet', () => {
   describe('open()', () => {

@@ -1,4 +1,4 @@
-import { Entity, PrimaryKey, Property, Index, Unique, Check } from '@mikro-orm/core';
+import { Entity, PrimaryKey, Property, Index, Unique } from '@mikro-orm/core';
 
 @Entity({ tableName: 'wager_transactions' })
 @Unique({ properties: ['idempotencyKey'] })
