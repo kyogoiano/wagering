@@ -15,22 +15,38 @@ import {
 } from './dto/transaction-response.dto';
 import { BusinessExceptionFilter } from '../common/filters/business-exception.filter';
 import { IdempotencyKeyGuard } from '../common/guards/idempotency-key.guard';
+import { TransactionService } from '@application/wager/transaction.service';
 
 @Controller('wagering')
 @UseFilters(BusinessExceptionFilter)
 export class WageringController {
+  constructor(private readonly transactionService: TransactionService) {}
+
   @Post('transactions')
   @UseInterceptors(IdempotencyKeyGuard)
   async submit(
     @Body() dto: SubmitTransactionDto,
-    @Headers('idempotency-key') _idempotencyKey: string,
+    @Headers('idempotency-key') idempotencyKey: string,
   ): Promise<TransactionResponseDto> {
-    // Placeholder — will be wired to use case
+    const result = await this.transactionService.submit({
+      idempotencyKey,
+      providerId: dto.providerId,
+      externalTransactionId: dto.externalTransactionId,
+      playerId: dto.playerId,
+      walletId: dto.walletId,
+      roundId: dto.roundId,
+      gameId: dto.gameId,
+      kind: dto.kind,
+      moneyAmount: dto.money.amount,
+      moneyCurrency: dto.money.currency,
+      referenceExternalTransactionId: dto.referenceExternalTransactionId,
+    });
+
     return {
-      transactionId: crypto.randomUUID(),
-      status: 'PROCESSED',
-      balance: { amount: '0.00', currency: dto.money.currency },
-      idempotentReplay: false,
+      transactionId: result.transactionId,
+      status: result.status,
+      balance: result.balance,
+      idempotentReplay: result.idempotentReplay,
     };
   }
 
@@ -38,15 +54,16 @@ export class WageringController {
   async getById(
     @Param('transactionId') transactionId: string,
   ): Promise<TransactionDetailDto> {
-    // Placeholder — will query database
+    const result = await this.transactionService.getById(transactionId);
     return {
-      id: transactionId,
-      providerId: '',
-      externalTransactionId: '',
-      status: 'PROCESSED',
-      kind: 'BET',
-      money: { amount: '0.00', currency: 'BRL' },
-      walletId: '',
+      id: result.id,
+      providerId: result.providerId,
+      externalTransactionId: result.externalTransactionId,
+      status: result.status,
+      kind: result.kind,
+      money: result.money,
+      walletId: result.walletId,
+      processedAt: result.processedAt,
     };
   }
 
@@ -55,15 +72,19 @@ export class WageringController {
     @Param('providerId') providerId: string,
     @Param('externalTransactionId') externalTransactionId: string,
   ): Promise<TransactionDetailDto> {
-    // Placeholder — will query database
-    return {
-      id: '',
+    const result = await this.transactionService.getByProvider(
       providerId,
       externalTransactionId,
-      status: 'PROCESSED',
-      kind: 'BET',
-      money: { amount: '0.00', currency: 'BRL' },
-      walletId: '',
+    );
+    return {
+      id: result.id,
+      providerId: result.providerId,
+      externalTransactionId: result.externalTransactionId,
+      status: result.status,
+      kind: result.kind,
+      money: result.money,
+      walletId: result.walletId,
+      processedAt: result.processedAt,
     };
   }
 }

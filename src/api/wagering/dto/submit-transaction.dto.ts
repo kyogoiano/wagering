@@ -1,4 +1,4 @@
-import { IsUUID, IsString, IsNotEmpty, IsIn } from 'class-validator';
+import { IsUUID, IsString, IsNotEmpty, IsIn, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 import { MoneyDto } from '../wallets/dto/create-wallet.dto';
 import { WagerTransactionKind } from '@domain/transaction';
@@ -31,4 +31,8 @@ export class SubmitTransactionDto {
 
   @Type(() => MoneyDto)
   money!: MoneyDto;
+
+  @IsString()
+  @IsOptional()
+  referenceExternalTransactionId?: string;
 }

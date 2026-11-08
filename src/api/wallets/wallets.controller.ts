@@ -8,7 +8,6 @@ import {
   HttpCode,
   HttpStatus,
   UseFilters,
-
 } from '@nestjs/common';
 import { CreateWalletDto } from './dto/create-wallet.dto';
 import {
@@ -17,43 +16,42 @@ import {
 } from './dto/wallet-response.dto';
 import { BusinessExceptionFilter } from '../common/filters/business-exception.filter';
 import { Money } from '@domain/money';
-import { Wallet } from '@domain/wallet';
+import { WalletService } from '@application/wallet/wallet.service';
 
 @Controller('wallets')
 @UseFilters(BusinessExceptionFilter)
 export class WalletsController {
+  constructor(private readonly walletService: WalletService) {}
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateWalletDto): Promise<WalletResponseDto> {
-    // Placeholder — will be wired to use case once persistence is ready
     const initialBalance = Money.from({
       amount: dto.initialBalance.amount,
       currency: dto.initialBalance.currency,
     });
 
-    const wallet = Wallet.open({
-      id: crypto.randomUUID(),
+    const result = await this.walletService.create({
       playerId: dto.playerId,
       initialBalance,
     });
 
-    const state = wallet.toJSON();
     return {
-      id: state.id,
-      playerId: state.playerId,
-      balance: { amount: state.balanceAmount, currency: state.currency },
-      version: state.version,
+      id: result.id,
+      playerId: result.playerId,
+      balance: result.balance,
+      version: result.version,
     };
   }
 
   @Get(':walletId')
   async getById(@Param('walletId') walletId: string): Promise<WalletResponseDto> {
-    // Placeholder — will query database
+    const result = await this.walletService.getById(walletId);
     return {
-      id: walletId,
-      playerId: '',
-      balance: { amount: '0.00', currency: 'BRL' },
-      version: 0,
+      id: result.id,
+      playerId: result.playerId,
+      balance: result.balance,
+      version: result.version,
     };
   }
 
@@ -64,11 +62,11 @@ export class WalletsController {
     @Query('limit') limit?: string,
   ): Promise<LedgerPageResponseDto> {
     const pageLimit = Math.min(Math.max(Number(limit) || 50, 1), 100);
-    // Placeholder — will query database with cursor pagination
+    const result = await this.walletService.getLedger(walletId, pageLimit, cursor);
     return {
-      entries: [],
-      nextCursor: null,
-      hasMore: false,
+      entries: result.entries,
+      nextCursor: result.nextCursor,
+      hasMore: result.hasMore,
     };
   }
 }
