@@ -23,7 +23,7 @@ Este plano estabelece a estrutura **Spec-Driven Design (SDD)** completa para o p
 - ✓ SPEC-000: Core Wagering Domain (108 testes)
 - ✓ SPEC-000.1: Inbox/Outbox Messaging (51 testes)
 - ✓ SPEC-000.2: API HTTP Endpoints (controllers, services, repositories)
-- ✓ SPEC-000.3: Concurrency/Idempotency (ProcessTransaction use case, 8 testes)
+- ✓ SPEC-000.3: Concurrency/Idempotency (22 testes — IdempotencyService, PendingReferenceWorker, PENDING_REFERENCE)
 - ✓ SPEC-000.4: Observability & Health (35 testes — Pino logger, Prometheus metrics, health checks)
 - ⏳ SPEC-000.5: Tests de concorrência (pendente)
 - ⏳ SPEC-000.6: Auth Keycloak/OIDC (pendente)

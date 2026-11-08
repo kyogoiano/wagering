@@ -22,7 +22,8 @@
       "@domain": ["src/domain/index.ts"],
       "@infrastructure/*": ["src/infrastructure/*"],
       "@app/*": ["src/app/*"],
-      "@api/*": ["src/api/*"]
+      "@api/*": ["src/api/*"],
+      "@application/*": ["src/application/*"]
     }
   },
   "include": ["src/**/*"],

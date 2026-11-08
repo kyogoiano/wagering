@@ -1,5 +1,6 @@
 import { EntityRepository } from '@mikro-orm/core';
 import { WagerTransactionEntity } from './wager-transaction.entity';
+import { WagerTransactionStatus } from '@domain/transaction';
 
 export class WagerTransactionRepository extends EntityRepository<WagerTransactionEntity> {
   async findById(transactionId: string): Promise<WagerTransactionEntity | null> {
@@ -19,6 +20,15 @@ export class WagerTransactionRepository extends EntityRepository<WagerTransactio
 
   async findByPayloadHash(payloadHash: string): Promise<WagerTransactionEntity | null> {
     return this.findOne({ payloadHash });
+  }
+
+  async findPendingReferencesDue(now: Date): Promise<WagerTransactionEntity[]> {
+    return this.findAll({
+      where: {
+        status: WagerTransactionStatus.PendingReference,
+        nextAttemptAt: { $lte: now },
+      },
+    });
   }
 
   async create(transaction: WagerTransactionEntity): Promise<void> {
