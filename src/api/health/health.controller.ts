@@ -1,8 +1,10 @@
 import { Controller, Get, HttpCode, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
 import { PostgresHealthIndicator } from '@infrastructure/observability/health/postgres.health.indicator';
 import { SqsHealthIndicator } from '@infrastructure/observability/health/sqs.health.indicator';
+import { Public } from '@auth/decorators/public.decorator';
 
 @Controller('health')
+@Public()
 export class HealthController {
   constructor(
     private readonly postgresHealth: PostgresHealthIndicator,

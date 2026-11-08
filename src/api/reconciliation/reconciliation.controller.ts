@@ -2,6 +2,7 @@ import { Controller, Post, Param, UseFilters } from '@nestjs/common';
 import { ReconciliationResponseDto } from './dto/reconciliation-response.dto';
 import { BusinessExceptionFilter } from '../common/filters/business-exception.filter';
 import { ReconciliationService } from '@application/reconciliation/reconciliation.service';
+import { Roles, JungleRole } from '@auth/decorators/roles.decorator';
 
 @Controller('wallets')
 @UseFilters(BusinessExceptionFilter)
@@ -9,6 +10,7 @@ export class ReconciliationController {
   constructor(private readonly reconciliationService: ReconciliationService) {}
 
   @Post(':walletId/reconciliation')
+  @Roles(JungleRole.ADMIN, JungleRole.OPERATOR)
   async reconcile(
     @Param('walletId') walletId: string,
   ): Promise<ReconciliationResponseDto> {

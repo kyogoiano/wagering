@@ -1,0 +1,45 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8
+    container_name: jungle-keycloak
+    command: start-dev
+    ports:
+      - '8080:8080'
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_password
+      KC_HTTP_RELATIVE_PATH: /auth
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:8080/auth/realms/master || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak-db:
+    image: postgres:16
+    container_name: jungle-keycloak-db
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_password
+    ports:
+      - '5433:5432'
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keycloak']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  keycloak_data:

@@ -1,0 +1,81 @@
+{
+  "id": "jungle",
+  "realm": "jungle",
+  "enabled": true,
+  "notBefore": 0,
+  "defaultSignatureAlgorithm": "RS256",
+  "revokeRefreshToken": false,
+  "refreshTokenMaxReuse": 0,
+  "accessTokenLifespan": 300,
+  "accessTokenLifespanForImplicitFlow": 900,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "clients": [
+    {
+      "clientId": "jungle-api",
+      "enabled": true,
+      "publicClient": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": true,
+      "secret": "change-me-in-production",
+      "redirectUris": [
+        "http://localhost:*"
+      ],
+      "webOrigins": [
+        "http://localhost:*"
+      ],
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "user.attribute": "foo",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "claim.name": "realm_access.roles",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "id": "jungle-admin",
+        "name": "jungle-admin",
+        "description": "Full access to all Jungle resources",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "jungle-operator",
+        "name": "jungle-operator",
+        "description": "Read access and reconciliation execution",
+        "composite": false,
+        "clientRole": false
+      },
+      {
+        "id": "jungle-reader",
+        "name": "jungle-reader",
+        "description": "Read-only access to wallets and transactions",
+        "composite": false,
+        "clientRole": false
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "service-account-jungle-api",
+      "enabled": true,
+      "serviceAccountClientId": "jungle-api",
+      "roles": ["jungle-admin"]
+    }
+  ]
+}
