@@ -1,15 +1,14 @@
-import { describe, expect, it, mock } from 'bun:test';
-import { OutboxPublisherWorker } from './outbox-publisher.worker';
-import { OutboxMessageRepository } from '@infrastructure/persistence/outbox-message.repository';
+import {describe, expect, it, mock} from 'bun:test';
+import {OutboxPublisherWorker} from './outbox-publisher.worker';
+import {OutboxMessageRepository} from '@infrastructure/persistence/outbox-message.repository';
 
 describe('OutboxPublisherWorker', () => {
   const buildMockRepo = () => {
-    const repo = {
+    return {
       findPendingDue: mock(() => Promise.resolve([])),
       markAsPublished: mock(() => Promise.resolve()),
       retryLater: mock(() => Promise.resolve()),
     } as unknown as OutboxMessageRepository;
-    return repo;
   };
 
   describe('publish', () => {
