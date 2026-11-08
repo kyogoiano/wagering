@@ -1,4 +1,4 @@
-import { EntityRepository, WrapIdentifier } from '@mikro-orm/core';
+import { EntityRepository } from '@mikro-orm/core';
 import { WalletEntity } from './wallet.entity';
 
 export class WalletRepository extends EntityRepository<WalletEntity> {
