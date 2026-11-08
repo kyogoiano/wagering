@@ -1,22 +1,35 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
+import { SQSClient, GetQueueUrlCommand } from '@aws-sdk/client-sqs';
 import { HealthIndicatorResult } from './postgres.health.indicator';
+
+const SQS_CLIENT_TOKEN = 'SQS_CLIENT_TOKEN';
+
+interface SqsHealthConfig {
+  queueName: string;
+}
 
 @Injectable()
 export class SqsHealthIndicator {
-  // SQS will be configured via MiniStack or AWS SDK in a later phase.
-  // For now, this indicator checks if the SQS environment is configured.
+  constructor(
+    @Optional()
+    @Inject(SQS_CLIENT_TOKEN)
+    private readonly sqsClient: SQSClient | undefined,
+    @Optional()
+    private readonly config: SqsHealthConfig | undefined,
+  ) {}
+
   async isHealthy(): Promise<HealthIndicatorResult> {
     try {
-      const queueUrl = process.env.SQS_QUEUE_URL;
-      if (!queueUrl) {
+      if (!this.sqsClient || !this.config) {
         return {
           status: 'down',
           detail: { sqs: 'not_configured' },
-          error: 'SQS_QUEUE_URL not configured',
+          error: 'SQS client not available',
         };
       }
-      // In production this would call AWS SDK ListQueues or SendMessage
-      // For now we consider it healthy if configured
+      await this.sqsClient.send(
+        new GetQueueUrlCommand({ QueueName: this.config.queueName }),
+      );
       return {
         status: 'up',
         detail: { sqs: 'ok' },

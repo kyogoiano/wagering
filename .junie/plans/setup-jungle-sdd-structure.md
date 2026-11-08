@@ -94,7 +94,8 @@ Criar os documentos complementares de arquitetura, planos, tarefas, agentes, ski
 - `.spec/summaries/SUMMARY-000.5-tests-concurrency.md`
 - `.spec/summaries/SUMMARY-000.6-auth-keycloak-oidc.md`
 
-### ✓ Step 3: Criar SPEC-000.7 (MiniStack, documentação e manuais)
+### ✓ Step 3: Criar SPEC-000.7 (Spec, plan, tasks definidos)
+### ✓ Step 4: Implementar SPEC-000.7 (MiniStack SQS, documentação e manuais)
 Revisão do Challenge.md revelou gaps críticos que exigem uma nova spec.
 
 **Gaps identificados:**

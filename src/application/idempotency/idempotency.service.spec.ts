@@ -3,6 +3,7 @@ import { IdempotencyService } from './idempotency.service';
 import { WagerTransactionRepository } from '@infrastructure/persistence/wager-transaction.repository';
 import { Money } from '@domain/money';
 import { WagerTransactionKind, WagerTransactionStatus } from '@domain/transaction';
+import { IdempotencyConflictError } from '@domain/errors/domain.error';
 
 describe('IdempotencyService', () => {
   const buildMockRepo = (

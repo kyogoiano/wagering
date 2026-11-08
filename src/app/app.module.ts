@@ -10,6 +10,7 @@ import { HealthModule } from '@api/health/health.module';
 import { WalletsModule } from '@api/wallets/wallets.module';
 import { WageringModule } from '@api/wagering/wagering.module';
 import { ReconciliationModule } from '@api/reconciliation/reconciliation.module';
+import { SqsModule } from '@infrastructure/messaging/sqs/sqs.module';
 import { CorrelationIdInterceptor } from '@api/common/interceptors/correlation-id.interceptor';
 import { HttpMetricsMiddleware } from '@infrastructure/observability/metrics/http-metrics.middleware';
 
@@ -25,6 +26,7 @@ import { HttpMetricsMiddleware } from '@infrastructure/observability/metrics/htt
     WalletsModule,
     WageringModule,
     ReconciliationModule,
+    SqsModule.forRoot(),
   ],
   providers: [
     {
