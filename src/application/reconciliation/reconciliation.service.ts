@@ -3,6 +3,8 @@ import { WalletRepository } from '@infrastructure/persistence/wallet.repository'
 import { WalletLedgerEntryRepository } from '@infrastructure/persistence/wallet-ledger-entry.repository';
 import { Money } from '@domain/money';
 import { WalletNotFoundError } from '@domain/errors/domain.error';
+import { PrometheusMetricsService } from '@infrastructure/observability/metrics/prometheus-metrics.service';
+import { PinoLoggerService } from '@infrastructure/observability/logging/pino-logger.service';
 
 export interface ReconciliationOutput {
   walletId: string;
@@ -18,6 +20,8 @@ export class ReconciliationService {
   constructor(
     private readonly walletRepository: WalletRepository,
     private readonly ledgerRepository: WalletLedgerEntryRepository,
+    private readonly metricsService: PrometheusMetricsService,
+    private readonly logger: PinoLoggerService,
   ) {}
 
   async reconcile(walletId: string): Promise<ReconciliationOutput> {
@@ -46,6 +50,22 @@ export class ReconciliationService {
 
     const difference = storedBalance.subtract(calculatedBalance);
     const consistent = difference.equals(Money.from({ amount: '0', currency: walletEntity.currency }));
+
+    if (!consistent) {
+      this.metricsService.incrementReconciliationDiscrepancy();
+      this.logger.error(
+        'Reconciliation discrepancy detected',
+        undefined,
+        'ReconciliationService',
+        {
+          walletId,
+          storedBalance: storedBalance.amount,
+          calculatedBalance: calculatedBalance.amount,
+          difference: difference.amount,
+          currency: storedBalance.currency,
+        },
+      );
+    }
 
     return {
       walletId,

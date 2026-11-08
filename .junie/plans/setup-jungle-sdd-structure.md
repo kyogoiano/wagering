@@ -17,8 +17,16 @@ Este plano estabelece a estrutura **Spec-Driven Design (SDD)** completa para o p
 - Criar o `ROADMAP.md` descrevendo tudo que será construído conforme o Challenge.md
 
 ### Out of Scope
-- Implementação do código da aplicação (virá em etapas subsequentes, após revisão das specs)
-- Configuração do NestJS, MikroORM ou Docker (parte da implementação)
+- Configuração do Docker (parte da implementação)
+
+### Implementation Status
+- ✓ SPEC-000: Core Wagering Domain (108 testes)
+- ✓ SPEC-000.1: Inbox/Outbox Messaging (51 testes)
+- ✓ SPEC-000.2: API HTTP Endpoints (controllers, services, repositories)
+- ✓ SPEC-000.3: Concurrency/Idempotency (ProcessTransaction use case, 8 testes)
+- ✓ SPEC-000.4: Observability & Health (35 testes — Pino logger, Prometheus metrics, health checks)
+- ⏳ SPEC-000.5: Tests de concorrência (pendente)
+- ⏳ SPEC-000.6: Auth Keycloak/OIDC (pendente)
 
 # Delivery Steps
 
