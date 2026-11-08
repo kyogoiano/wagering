@@ -1,6 +1,6 @@
 import { IsUUID, IsString, IsNotEmpty, IsIn, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
-import { MoneyDto } from '../wallets/dto/create-wallet.dto';
+import { MoneyDto } from '@api/wallets/dto/create-wallet.dto';
 import { WagerTransactionKind } from '@domain/transaction';
 
 export class SubmitTransactionDto {

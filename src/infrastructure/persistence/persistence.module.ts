@@ -1,5 +1,6 @@
-import { DynamicModule, Module, Global } from '@nestjs/common';
-import { MikroORM, MikroORMModule } from '@mikro-orm/nestjs';
+import { DynamicModule, Module, Global, OnModuleInit } from '@nestjs/common';
+import { MikroOrmModule, getRepositoryToken } from '@mikro-orm/nestjs';
+import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { WalletEntity } from './wallet.entity';
 import { WagerTransactionEntity } from './wager-transaction.entity';
 import { WalletLedgerEntryEntity } from './wallet-ledger-entry.entity';
@@ -16,8 +17,8 @@ export class PersistenceModule {
     return {
       module: PersistenceModule,
       imports: [
-        MikroORMModule.forRoot({
-          type: 'postgresql',
+        MikroOrmModule.forRoot({
+          driver: PostgreSqlDriver,
           host: process.env.DB_HOST || 'localhost',
           port: parseInt(process.env.DB_PORT || '5432', 10),
           user: process.env.DB_USER || 'postgres',
@@ -32,7 +33,7 @@ export class PersistenceModule {
           ],
           debug: process.env.NODE_ENV !== 'production',
         }),
-        MikroORMModule.forFeature([
+        MikroOrmModule.forFeature([
           WalletEntity,
           WagerTransactionEntity,
           WalletLedgerEntryEntity,
@@ -41,16 +42,35 @@ export class PersistenceModule {
         ]),
       ],
       providers: [
-        WalletRepository,
-        WagerTransactionRepository,
-        WalletLedgerEntryRepository,
+        {
+          provide: WalletRepository,
+          useFactory: (repo: any) => {
+            const custom = Object.create(WalletRepository.prototype);
+            Object.assign(custom, repo);
+            return custom;
+          },
+          inject: [getRepositoryToken(WalletEntity)],
+        },
+        {
+          provide: WagerTransactionRepository,
+          useFactory: (repo: any) => {
+            const custom = Object.create(WagerTransactionRepository.prototype);
+            Object.assign(custom, repo);
+            return custom;
+          },
+          inject: [getRepositoryToken(WagerTransactionEntity)],
+        },
+        {
+          provide: WalletLedgerEntryRepository,
+          useFactory: (repo: any) => {
+            const custom = Object.create(WalletLedgerEntryRepository.prototype);
+            Object.assign(custom, repo);
+            return custom;
+          },
+          inject: [getRepositoryToken(WalletLedgerEntryEntity)],
+        },
       ],
-      exports: [
-        MikroORMModule,
-        WalletRepository,
-        WagerTransactionRepository,
-        WalletLedgerEntryRepository,
-      ],
+      exports: [MikroOrmModule, WalletRepository, WagerTransactionRepository, WalletLedgerEntryRepository],
     };
   }
 }

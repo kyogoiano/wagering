@@ -14,7 +14,7 @@ export interface LogContext {
 export class PinoLoggerService implements LoggerService {
   protected readonly logger: PinoLogger;
 
-  constructor(options?: pino.LoggerOptions) {
+  constructor() {
     this.logger = pino({
       level: process.env.LOG_LEVEL || 'info',
       timestamp: pino.stdTimeFunctions.isoTime,
@@ -23,7 +23,6 @@ export class PinoLoggerService implements LoggerService {
           return { level: label.toUpperCase() };
         },
       },
-      ...options,
     });
   }
 

@@ -85,7 +85,7 @@ export class WalletService {
     await this.walletRepository.create(walletEntity);
 
     // If there's an opening balance, create OPENING transaction and ledger entry
-    if (input.initialBalance.greaterThan(Money.from({ amount: '0', currency: input.initialBalance.currency }))) {
+    if (input.initialBalance.isGreaterThan(Money.from({ amount: '0', currency: input.initialBalance.currency }))) {
       const txId = crypto.randomUUID();
       const txEntity = this.walletRepository.em.create('WagerTransactionEntity', {
         id: txId,

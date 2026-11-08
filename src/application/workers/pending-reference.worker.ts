@@ -1,9 +1,13 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectEntityManager, InjectRepository } from '@mikro-orm/nestjs';
 import { EntityManager } from '@mikro-orm/core';
 import { WagerTransactionRepository } from '@infrastructure/persistence/wager-transaction.repository';
 import { WalletRepository } from '@infrastructure/persistence/wallet.repository';
 import { WalletLedgerEntryRepository } from '@infrastructure/persistence/wallet-ledger-entry.repository';
+import { WagerTransactionEntity } from '@infrastructure/persistence/wager-transaction.entity';
+import { WalletEntity } from '@infrastructure/persistence/wallet.entity';
+import { WalletLedgerEntryEntity } from '@infrastructure/persistence/wallet-ledger-entry.entity';
 import {
   WagerTransactionKind,
   WagerTransactionStatus,
@@ -32,14 +36,16 @@ export const DEFAULT_PENDING_REFERENCE_CONFIG: PendingReferenceConfig = {
 export class PendingReferenceWorker {
   private readonly logger = new Logger(PendingReferenceWorker.name);
   private readonly config: PendingReferenceConfig;
+  private em: EntityManager;
 
   constructor(
-    private readonly em: EntityManager,
-    private readonly transactionRepository: WagerTransactionRepository,
-    private readonly walletRepository: WalletRepository,
-    private readonly ledgerRepository: WalletLedgerEntryRepository,
-    config?: Partial<PendingReferenceConfig>,
+    @InjectEntityManager('default') em: EntityManager,
+    @InjectRepository(WagerTransactionEntity) private readonly transactionRepository: WagerTransactionRepository,
+    @InjectRepository(WalletEntity) private readonly walletRepository: WalletRepository,
+    @InjectRepository(WalletLedgerEntryEntity) private readonly ledgerRepository: WalletLedgerEntryRepository,
+    @Optional() config?: Partial<PendingReferenceConfig>,
   ) {
+    this.em = em;
     this.config = { ...DEFAULT_PENDING_REFERENCE_CONFIG, ...config };
   }
 
