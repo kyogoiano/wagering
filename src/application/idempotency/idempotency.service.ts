@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@mikro-orm/nestjs';
 import { WagerTransactionRepository } from '@infrastructure/persistence/wager-transaction.repository';
-import { WagerTransactionEntity } from '@infrastructure/persistence/wager-transaction.entity';
 import { computePayloadHash, ProcessTransactionInput } from '@application/wager/process-transaction.usecase';
 import { IdempotencyConflictError } from '@domain/errors/domain.error';
 

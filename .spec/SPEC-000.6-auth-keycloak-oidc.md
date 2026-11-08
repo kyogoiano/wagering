@@ -35,14 +35,14 @@ O Challenge.md indica que autenticação não vale pontos na avaliação, mas o 
 
 **Contrato:**
 
-- **Imagem Docker:** `quay.io/keycloak/keycloak:25.0` (ou versão estável mais recente)
+- **Imagem Docker:** `quay.io/keycloak/keycloak:26.8` (ou versão estável mais recente)
 - **Modo de execução:** `start-dev` em desenvolvimento, `start` em produção
 - **Realm:** `jungle` (realm dedicado para o challenge)
 - **Client:** `jungle-api` (confidential client com client-secret)
 - **Protocolo:** OIDC (OpenID Connect 1.0)
 - **Grant types:** Authorization Code + Client Credentials
 - **Token format:** JWT (JSON Web Token)
-- **JWS algorithm:** RS256
+- **JWS algorithm:** Ed25519
 
 **Configuração do Realm:**
 
@@ -197,7 +197,7 @@ export class JwtAuthGuard {
 
 **Regras de Validação:**
 
-1. **Assinatura** — valida contra JWKs do Keycloak (RS256)
+1. **Assinatura** — valida contra JWKs do Keycloak (Ed25519)
 2. **Expiração** — rejeita tokens expirados (`exp` claim)
 3. **Issuer** — verifica `iss` claim corresponde ao issuer configurado
 4. **Audience** — verifica `aud` claim inclui o client ID configurado
@@ -281,7 +281,7 @@ export class RolesGuard implements CanActivate {
 # docker-compose.yml (adendo)
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:25.0
+    image: quay.io/keycloak/keycloak:26.8
     container_name: jungle-keycloak
     command: start-dev
     ports:

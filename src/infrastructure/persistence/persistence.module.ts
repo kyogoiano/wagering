@@ -1,4 +1,4 @@
-import { DynamicModule, Module, Global, OnModuleInit } from '@nestjs/common';
+import { DynamicModule, Module, Global } from '@nestjs/common';
 import { MikroOrmModule, getRepositoryToken } from '@mikro-orm/nestjs';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 import { WalletEntity } from './wallet.entity';
