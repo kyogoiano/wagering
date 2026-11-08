@@ -29,3 +29,69 @@
 
 - PendingReferenceWorker não está injetado como provider no AppModule (pendente de integração completa)
 - Sem testes de concorrência real com PostgreSQL (MikroORM v7 API incompatível com testes raw SQL em transações)
+
+---
+
+## Manual de Execução
+
+### Testar idempotência e concorrência
+
+```bash
+# Testes do IdempotencyService (6 testes)
+bun test src/application/idempotency/
+
+# Testes do PendingReferenceWorker (8 testes)
+bun test src/application/workers/
+
+# Testes de concorrência HTTP (requer PostgreSQL)
+DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=jungle_test \
+  bun test test/http/concurrency.e2e.spec.ts
+```
+
+### Verificar idempotência
+
+Os testes do IdempotencyService verificam:
+- **Replay idempotente:** mesma key + mesmo payload → retorna resultado original
+- **Conflito de payload:** mesma key + payload diferente → 409 Conflict
+- **Primeira chamada:** key não existe → processa normalmente
+
+### Cenário: PENDING_REFERENCE
+
+```typescript
+// 1. Enviar REFUND antes da BET referenciada
+// → Transação persistida como PENDING_REFERENCE, attempts = 0
+
+// 2. PendingReferenceWorker roda (@Cron a cada 30s)
+// → Encontra transação PENDING_REFERENCE com nextAttemptAt <= NOW()
+// → Tenta reprocessar — referência ainda ausente → scheduleRetry()
+
+// 3. Após N tentativas ou TTL excedido
+// → Transação REJECTED com failureCode = REFERENCE_NOT_FOUND
+```
+
+### Cenário: Disputa de saldo (Challenge.md §8)
+
+```bash
+# Saldo inicial: 100.00 BRL
+# Duas BETs de 80.00 BRL enviadas simultaneamente
+
+# Resultado esperado:
+# - Exatamente uma PROCESSED (débito de 80.00)
+# - A outra REJECTED (INSUFFICIENT_BALANCE)
+# - Saldo final: 20.00 BRL
+# - Exatamente 1 ledger entry DEBIT
+```
+
+### Verificar backoff exponencial
+
+```typescript
+// PendingReferenceWorker usa:
+// delay = baseDelayMs * 2^attempt, capped em maxDelayMs
+// Exemplo: baseDelay=1000ms, maxDelay=60000ms
+// Attempt 0: 1000ms
+// Attempt 1: 2000ms
+// Attempt 2: 4000ms
+// Attempt 3: 8000ms
+// ...
+// Attempt 6+: 60000ms (capped)
+```

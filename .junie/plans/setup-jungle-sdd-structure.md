@@ -26,7 +26,8 @@ Este plano estabelece a estrutura **Spec-Driven Design (SDD)** completa para o p
 - ✓ SPEC-000.3: Concurrency/Idempotency (22 testes — IdempotencyService, PendingReferenceWorker, PENDING_REFERENCE)
 - ✓ SPEC-000.4: Observability & Health (35 testes — Pino logger, Prometheus metrics, health checks)
 - ✓ SPEC-000.5: Tests de concorrência (7 testes de migrations, setup de integração)
-- ⏳ SPEC-000.6: Auth Keycloak/OIDC (pendente)
+- ✓ SPEC-000.6: Auth Keycloak/OIDC (31 testes)
+- ⏳ SPEC-000.7: MiniStack SQS, documentação e manuais de execução
 
 # Delivery Steps
 
@@ -92,3 +93,23 @@ Criar os documentos complementares de arquitetura, planos, tarefas, agentes, ski
 - `.spec/summaries/SUMMARY-000.4-observability-health.md`
 - `.spec/summaries/SUMMARY-000.5-tests-concurrency.md`
 - `.spec/summaries/SUMMARY-000.6-auth-keycloak-oidc.md`
+
+### ✓ Step 3: Criar SPEC-000.7 (MiniStack, documentação e manuais)
+Revisão do Challenge.md revelou gaps críticos que exigem uma nova spec.
+
+**Gaps identificados:**
+1. **MiniStack SQS** — Não configurado no docker-compose; sem consumer SQS real; sem outbox publisher worker
+2. **ARCHITECTURE.md** — Ausente no projeto raiz (exigido pela seção 14 do Challenge, 5 pontos)
+3. **README.md** — Sem instruções de setup completo (docker-compose, env vars, comandos de teste)
+4. **Manuais de execução** — Nenhum summary inclui instruções para exercitar as features implementadas
+5. **Testes de concorrência real** — Supertest configurado mas testes pendentes por bugs de aplicação
+
+**Arquivos a criar:**
+- `.spec/SPEC-000.7-ministack-sqs-infrastructure.md` — MiniStack no docker-compose, SQS consumer, outbox publisher, retry e DLQ
+- `.spec/plans/PLAN-000.7-ministack-sqs-infrastructure.md` — AWS SDK v3, filas FIFO, consumer com graceful shutdown
+- `.spec/tasks/TASKS-000.7-ministack-sqs-infrastructure.md` — Tarefas TDD para SQS integration
+- `.spec/summaries/SUMMARY-000.7-ministack-sqs-infrastructure.md` — estrutura vazia
+- `ARCHITECTURE.md` — Decisões arquiteturais, trade-offs e limitações (seção 14 do Challenge)
+- Atualizar `README.md` — Setup completo com docker-compose, env vars, scripts de teste
+- Atualizar todos os 7 summaries existentes com seção "Manual de Execução"
+- Atualizar `.spec/README.md` e `.spec/ROADMAP.md` com SPEC-000.7
