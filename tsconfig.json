@@ -19,8 +19,10 @@
     "baseUrl": ".",
     "paths": {
       "@domain/*": ["src/domain/*"],
+      "@domain": ["src/domain/index.ts"],
       "@infrastructure/*": ["src/infrastructure/*"],
-      "@app/*": ["src/app/*"]
+      "@app/*": ["src/app/*"],
+      "@api/*": ["src/api/*"]
     }
   },
   "include": ["src/**/*"],
