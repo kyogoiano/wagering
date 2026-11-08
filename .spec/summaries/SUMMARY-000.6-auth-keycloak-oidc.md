@@ -94,3 +94,78 @@ Implementada a camada de autenticação e autorização completa usando Keycloak
 - **Bun test mocks:** usar `mock()` do Bun, não `jest.fn()` — a API é diferente
 - **ConfigModule:** precisa de `forRoot({ isGlobal: true })` no AppModule para registerAs funcionar em módulos filhos
 - **AuthGuard unit tests:** quando não public, AuthGuard('jwt').canActivate() chama o passport que precisa de getResponse() no mock context
+
+---
+
+## Manual de Execução
+
+### Testar autenticação
+
+```bash
+# Testes unitários do Auth module (31 testes)
+bun test src/auth/
+
+# Testes específicos
+bun test src/auth/guards/roles.guard.spec.ts      # RolesGuard (15 testes)
+bun test src/auth/guards/jwt-auth.guard.spec.ts   # JwtAuthGuard (4 testes)
+bun test src/auth/decorators/decorators.spec.ts   # Decorators (7 testes)
+bun test src/auth/auth.config.spec.ts             # Config (5 testes)
+```
+
+### Iniciar Keycloak
+
+```bash
+# Iniciar Keycloak + banco com Docker Compose
+docker-compose up -d keycloak keycloak-db
+
+# Aguardar Keycloak iniciar (~30s)
+# Console: http://localhost:8080/auth/admin
+# Login: admin / admin
+
+# Importar realm jungle (automático via volume mount)
+# O realm-export.json é importado na inicialização
+```
+
+### Obter token JWT
+
+```bash
+# Authorization Code Grant (via browser)
+# 1. Acessar http://localhost:8080/auth/realms/jungle/protocol/openid-connect/auth
+#    ?client_id=jungle-api&response_type=code&redirect_uri=http://localhost:3000/callback
+# 2. Login com usuário do realm jungle
+# 3. Trocar code por token
+
+# Client Credentials (service account)
+curl -X POST http://localhost:8080/auth/realms/jungle/protocol/openid-connect/token \
+  -d "grant_type=client_credentials" \
+  -d "client_id=jungle-api" \
+  -d "client_secret=change-me-in-production"
+# → { "access_token": "eyJ...", "expires_in": 300, ... }
+```
+
+### Testar endpoints protegidos
+
+```bash
+# Health (público — sem token)
+curl http://localhost:3000/health/live
+# → 200 OK
+
+# Wallets (protegido — requer token)
+curl http://localhost:3000/wallets \
+  -H "Authorization: Bearer <access_token>"
+# → 200 OK (se role correta)
+# → 401 Unauthorized (se token inválido)
+# → 403 Forbidden (se role insuficiente)
+
+# Sem token
+curl http://localhost:3000/wallets
+# → 401 Unauthorized
+```
+
+### Hierarquia de roles
+
+| Role | POST /wallets | POST /wagering/transactions | GET /wallets | Reconciliation |
+|------|:-------------:|:---------------------------:|:------------:|:--------------:|
+| `jungle-admin` | ✅ | ✅ | ✅ | ✅ |
+| `jungle-operator` | ❌ | ✅ | ✅ | ✅ |
+| `jungle-reader` | ❌ | ❌ | ✅ | ❌ |

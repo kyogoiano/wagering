@@ -33,6 +33,7 @@ Descrevem **o que** será construído, com requisitos, invariantes, contratos e 
 | [SPEC-000.4](./SPEC-000.4-observability-health.md) | Observability & Health | Logs estruturados JSON, métricas, health checks live/ready |
 | [SPEC-000.5](./SPEC-000.5-tests-concurrency.md) | Tests & Concurrency | Testes de unidade, integração com containers, testes de concorrência real |
 | [SPEC-000.6](./SPEC-000.6-auth-keycloak-oidc.md) | Auth — Keycloak + OIDC | Autenticação via Keycloak, OIDC flows, JWT validation, roles-based authorization |
+| [SPEC-000.7](./SPEC-000.7-ministack-sqs-infrastructure.md) | MiniStack SQS & Documentation | MiniStack no docker-compose, SQS consumer, outbox publisher, ARCHITECTURE.md, README.md, manuais de execução |
 
 #### Arquitetura (`.spec/architecture/ARCH-*.md`)
 
@@ -55,6 +56,7 @@ Planos de implementação por fase, com módulos NestJS, entities MikroORM, DDL,
 | [PLAN-000.4](./plans/PLAN-000.4-observability-health.md) | Observability & Health | Pino logger, Prometheus metrics, health indicators |
 | [PLAN-000.5](./plans/PLAN-000.5-tests-concurrency.md) | Tests & Concurrency | Testes unitários, integração, race conditions |
 | [PLAN-000.6](./plans/PLAN-000.6-auth-keycloak-oidc.md) | Auth — Keycloak + OIDC | Auth module, JWT strategy, guards, Docker Compose, realm config |
+| [PLAN-000.7](./plans/PLAN-000.7-ministack-sqs-infrastructure.md) | MiniStack SQS & Documentation | AWS SDK v3, filas FIFO, consumer com graceful shutdown, outbox publisher |
 
 #### Tarefas (`.spec/tasks/TASKS-*.md`)
 
@@ -69,10 +71,22 @@ Breakdown de tarefas em ordem TDD (Test-Driven Development).
 | [TASKS-000.4](./tasks/TASKS-000.4-observability-health.md) | Observability & Health | Logging, metrics, health endpoints |
 | [TASKS-000.5](./tasks/TASKS-000.5-tests-concurrency.md) | Tests & Concurrency | Unit tests, integration tests, concurrency tests |
 | [TASKS-000.6](./tasks/TASKS-000.6-auth-keycloak-oidc.md) | Auth — Keycloak + OIDC | Docker setup, Auth module, guards, integration tests |
+| [TASKS-000.7](./tasks/TASKS-000.7-ministack-sqs-infrastructure.md) | MiniStack SQS & Documentation | SQS integration, documentation, execution manuals |
 
 #### Sumários (`.spec/summaries/SUMMARY-*.md`)
 
 Preenchidos **após** a implementação de cada fase, documentando o que foi construído, decisões tomadas e lições aprendidas.
+
+| Summary | Status |
+|---------|--------|
+| [SUMMARY-000](./summaries/SUMMARY-000-core-wagering-domain.md) | ✓ Concluído |
+| [SUMMARY-000.1](./summaries/SUMMARY-000.1-inbox-outbox-messaging.md) | ✓ Concluído |
+| [SUMMARY-000.2](./summaries/SUMMARY-000.2-api-http-endpoints.md) | ✓ Concluído |
+| [SUMMARY-000.3](./summaries/SUMMARY-000.3-concurrency-idempotency.md) | ✓ Concluído |
+| [SUMMARY-000.4](./summaries/SUMMARY-000.4-observability-health.md) | ✓ Concluído |
+| [SUMMARY-000.5](./summaries/SUMMARY-000.5-tests-concurrency.md) | ⏳ Parcial |
+| [SUMMARY-000.6](./summaries/SUMMARY-000.6-auth-keycloak-oidc.md) | ✓ Concluído |
+| [SUMMARY-000.7](./summaries/SUMMARY-000.7-ministack-sqs-infrastructure.md) | ⏳ Pendente |
 
 ### Regras do Projeto (`.agents/rules/`)
 

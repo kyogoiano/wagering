@@ -27,3 +27,65 @@
 - Testes de atomicidade e concorrência (balance dispute, parallel wallets, out-of-order reference) não foram implementados devido a incompatibilidade da API MikroORM v7 com raw SQL em transações
 - Os testes de concorrência real exigem que a aplicação seja testada via HTTP endpoints com múltiplos processos, não apenas via EntityManager
 - Recomenda-se implementar testes de concorrência via Supertest com a aplicação NestJS rodando, em vez de testes diretos do EntityManager
+
+---
+
+## Manual de Execução
+
+### Testar migrations e setup de integração
+
+```bash
+# Testes de migrations (7 testes — requer PostgreSQL)
+DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=jungle_test \
+  bun test test/integration/
+```
+
+### Testes HTTP de integração
+
+```bash
+# Health endpoints (2 testes)
+DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=jungle_test \
+  bun test test/http/health.e2e.spec.ts
+
+# Wallets CRUD (5 testes)
+DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=jungle_test \
+  bun test test/http/wallets.e2e.spec.ts
+
+# Wagering transactions (6 testes)
+DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=jungle_test \
+  bun test test/http/wagering.e2e.spec.ts
+
+# Concorrência real (3 testes)
+DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=postgres DB_NAME=jungle_test \
+  bun test test/http/concurrency.e2e.spec.ts
+```
+
+### Cenário: Disputa de saldo (Challenge.md §8)
+
+O teste `concurrency.e2e.spec.ts` executa:
+
+1. Criar wallet com saldo 100.00 BRL
+2. Enviar 2 BETs de 80.00 BRL **simultaneamente** (Promise.all)
+3. Verificar que exatamente uma foi PROCESSED e a outra REJECTED
+4. Verificar saldo final = 20.00 BRL
+5. Verificar exatamente 1 ledger entry DEBIT
+6. Verificar invariante: wallet.balance == sum(ledger entries)
+
+### Invariante de saldo
+
+```sql
+-- Verificar que o saldo materializado bate com o ledger
+SELECT
+  w.balance_amount,
+  SUM(
+    CASE
+      WHEN l.direction = 'CREDIT' THEN l.money_amount
+      ELSE -l.money_amount
+    END
+  ) AS calculated_balance
+FROM wallets w
+JOIN wallet_ledger_entries l ON l.wallet_id = w.id
+WHERE w.id = '<walletId>'
+GROUP BY w.id, w.balance_amount;
+-- balance_amount deve ser igual a calculated_balance
+```

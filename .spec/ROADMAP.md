@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-O roadmap descreve todas as fases do **Distributed Wagering Processor**, decompostas em 7 especificações atômicas que seguem a ordem de dependência e prioridade do Challenge.md.
+O roadmap descreve todas as fases do **Distributed Wagering Processor**, decompostas em 8 especificações atômicas que seguem a ordem de dependência e prioridade do Challenge.md.
 
 Cada fase segue o ciclo SDD (Spec → Plan → Tasks → Implement → Summary) e é implementada com TDD (Test-Driven Development).
 
@@ -198,6 +198,35 @@ Cada fase segue o ciclo SDD (Spec → Plan → Tasks → Implement → Summary) 
 
 ---
 
+### Fase 8: MiniStack SQS & Documentation
+
+**Spec:** [SPEC-000.7](./SPEC-000.7-ministack-sqs-infrastructure.md)
+**Plan:** [PLAN-000.7](./plans/PLAN-000.7-ministack-sqs-infrastructure.md)
+**Tasks:** [TASKS-000.7](./tasks/TASKS-000.7-ministack-sqs-infrastructure.md)
+
+**Objetivo:** Completar a infraestrutura de mensageria com MiniStack SQS, implementar consumer e outbox publisher, e finalizar a documentação exigida pelo Challenge.
+
+**Entregáveis:**
+- MiniStack configurado no docker-compose (porta 4566)
+- Filas FIFO criadas automaticamente: `wager-transactions.fifo` e `wager-transactions-dlq.fifo`
+- SQS Consumer com polling, inbox deduplicação, ack após commit e graceful shutdown
+- Outbox Publisher Worker com `SKIP LOCKED` para múltiplos workers concorrentes
+- `ARCHITECTURE.md` no projeto raiz com decisões, trade-offs e limitações
+- `README.md` completo com setup, variáveis de ambiente, scripts e API endpoints
+- Manuais de execução em cada summary (SPEC-000 a SPEC-000.6)
+
+**Critérios de Aceitação:**
+- MiniStack roda no docker-compose na porta 4566
+- Mensagens SQS são processadas sem duplicação via inbox persistente
+- Eventos pendentes na outbox são publicados pelo worker
+- `ARCHITECTURE.md` cobre todas as seções exigidas pelo Challenge (§14)
+- `README.md` permite setup completo com `docker-compose up -d && bun install && bun run start`
+- Todos os summaries têm seção "Manual de Execução"
+
+**Dependências:** Fase 2 (Inbox & Outbox Messaging), Fase 5 (Observability)
+
+---
+
 ## Ordem de Execução
 
 ```
@@ -213,11 +242,14 @@ Fase 5: Observability & Health (paraleliza com Fase 3)
     ↓
 Fase 7: Auth — Keycloak + OIDC (paraleliza com Fase 5)
     ↓
+Fase 8: MiniStack SQS & Documentation
+    ↓
 Fase 6: Tests & Concurrency
 ```
 
 ## Referências
 
 - [Challenge.md](../Challenge.md) — documento original do desafio
+- [ARCHITECTURE.md](../ARCHITECTURE.md) — decisões arquiteturais, trade-offs e limitações
 - [ARCH-000](./architecture/ARCH-000-distributed-wagering-processor.md) — arquitetura geral
 - [Constitution](../.agents/rules/constitution.md) — invariantes do projeto
