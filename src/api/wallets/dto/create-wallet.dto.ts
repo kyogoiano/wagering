@@ -1,4 +1,4 @@
-import { IsUUID, IsString, IsNotEmpty, ValidateIf } from 'class-validator';
+import { IsUUID, IsString, IsNotEmpty, ValidateIf, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class MoneyDto {
@@ -16,6 +16,7 @@ export class CreateWalletDto {
   @IsUUID('4')
   playerId!: string;
 
+  @IsObject()
   @Type(() => MoneyDto)
   initialBalance!: MoneyDto;
 }

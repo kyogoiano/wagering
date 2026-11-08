@@ -221,7 +221,7 @@ export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 # docker-compose.yml (adendo)
 services:
   keycloak:
-    image: quay.io/keycloak/keycloak:25.0
+    image: quay.io/keycloak/keycloak:26.8
     container_name: jungle-keycloak
     command: start-dev
     ports:

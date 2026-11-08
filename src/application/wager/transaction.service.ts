@@ -57,13 +57,15 @@ export interface TransactionDetailOutput {
 
 @Injectable()
 export class TransactionService {
+  private em: EntityManager;
   constructor(
-    private readonly em: EntityManager,
     private readonly walletRepository: WalletRepository,
     private readonly transactionRepository: WagerTransactionRepository,
     private readonly ledgerRepository: WalletLedgerEntryRepository,
     private readonly idempotencyService: IdempotencyService,
-  ) {}
+  ) {
+    this.em = walletRepository.em;
+  }
 
   async submit(input: SubmitTransactionInput): Promise<SubmitTransactionOutput> {
     const money = Money.from({

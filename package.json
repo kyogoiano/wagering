@@ -7,7 +7,7 @@
     "dev": "bun run --watch src/main.ts",
     "test": "bun test",
     "test:unit": "bun test --test-name-pattern=\\.spec\\.ts$",
-    "test:integration": "bun test --test-name-pattern=\\.e2e\\.ts$",
+    "test:integration": "DB_HOST=localhost DB_PORT=5432 DB_USER=wallet DB_PASSWORD=wallet DB_NAME=jungle_test bun test test/http/",
     "typecheck": "tsc --noEmit",
     "migration:create": "mikro-orm migration:create",
     "migration:up": "mikro-orm migration:up",
@@ -22,6 +22,7 @@
     "@nestjs/core": "^12.4.0",
     "@nestjs/platform-express": "^12.4.0",
     "@nestjs/schedule": "^12.0.3",
+    "@nestjs/testing": "^12.4.0",
     "@prometheus-io/client": "^0.16.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -33,7 +34,10 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.0.0",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.2",
     "typescript": "^6.0.0"
   }
 }
