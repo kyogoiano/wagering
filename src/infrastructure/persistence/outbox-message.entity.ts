@@ -1,10 +1,6 @@
-import { Entity, PrimaryKey, Property, Index, Check } from '@mikro-orm/core';
+import { Entity, PrimaryKey, Property, Index } from '@mikro-orm/decorators/legacy';
 
 @Entity({ tableName: 'outbox_messages' })
-@Check(
-  "(published_at IS NULL AND attempts < 5) OR (published_at IS NOT NULL)",
-  'chk_outbox_pending',
-)
 export class OutboxMessageEntity {
   @PrimaryKey({ type: 'uuid', defaultRaw: 'gen_random_uuid()' })
   id!: string;

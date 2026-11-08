@@ -1,8 +1,7 @@
-import { Entity, PrimaryKey, Property, Index, Unique, Check } from '@mikro-orm/core';
+import { Entity, PrimaryKey, Property, Index, Unique } from '@mikro-orm/decorators/legacy';
 
 @Entity({ tableName: 'wallets' })
 @Unique({ properties: ['playerId', 'currency'] })
-@Check('balance_amount >= 0')
 export class WalletEntity {
   @PrimaryKey({ type: 'uuid' })
   id!: string;

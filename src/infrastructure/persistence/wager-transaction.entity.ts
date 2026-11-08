@@ -1,4 +1,4 @@
-import { Entity, PrimaryKey, Property, Index, Unique } from '@mikro-orm/core';
+import { Entity, PrimaryKey, Property, Index, Unique } from '@mikro-orm/decorators/legacy';
 
 @Entity({ tableName: 'wager_transactions' })
 @Unique({ properties: ['idempotencyKey'] })
@@ -61,4 +61,11 @@ export class WagerTransactionEntity {
 
   @Property({ type: 'datetime', nullable: true })
   processedAt?: Date;
+
+  // PENDING_REFERENCE retry fields
+  @Property({ type: 'number', default: 0 })
+  attempts!: number;
+
+  @Property({ type: 'datetime', nullable: true })
+  nextAttemptAt?: Date;
 }

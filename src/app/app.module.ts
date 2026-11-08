@@ -1,5 +1,6 @@
 import { Module, ValidationPipe, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { APP_PIPE, APP_INTERCEPTOR } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PersistenceModule } from '@infrastructure/persistence/persistence.module';
 import { LoggingModule } from '@infrastructure/observability/logging/logging.module';
 import { MetricsModule } from '@infrastructure/observability/metrics/metrics.module';
@@ -12,6 +13,7 @@ import { HttpMetricsMiddleware } from '@infrastructure/observability/metrics/htt
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     PersistenceModule.forRoot(),
     LoggingModule.forRoot(),
     MetricsModule.forRoot(),

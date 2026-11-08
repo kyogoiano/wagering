@@ -1,11 +1,7 @@
-import { Entity, PrimaryKey, Property, Index, Unique, Check } from '@mikro-orm/core';
+import { Entity, PrimaryKey, Property, Index, Unique } from '@mikro-orm/decorators/legacy';
 
 @Entity({ tableName: 'wallet_ledger_entries' })
 @Unique({ properties: ['transactionId'] })
-@Check('direction IN (\'DEBIT\', \'CREDIT\')')
-@Check('amount >= 0')
-@Check('balance_before >= 0')
-@Check('balance_after >= 0')
 export class WalletLedgerEntryEntity {
   @PrimaryKey({ type: 'uuid' })
   id!: string;

@@ -15,8 +15,13 @@ import {
   WalletNotFoundError,
   InsufficientBalanceError,
   ReferenceNotFoundError,
+
 } from '@domain/errors/domain.error';
-import { computePayloadHash } from '@application/wager/process-transaction.usecase';
+import {
+  computePayloadHash,
+  ProcessTransactionInput,
+} from '@application/wager/process-transaction.usecase';
+import { IdempotencyService } from '@application/idempotency/idempotency.service';
 
 export interface SubmitTransactionInput {
   idempotencyKey: string;
@@ -57,24 +62,57 @@ export class TransactionService {
     private readonly walletRepository: WalletRepository,
     private readonly transactionRepository: WagerTransactionRepository,
     private readonly ledgerRepository: WalletLedgerEntryRepository,
+    private readonly idempotencyService: IdempotencyService,
   ) {}
 
   async submit(input: SubmitTransactionInput): Promise<SubmitTransactionOutput> {
-    // Check idempotency by idempotencyKey
-    const existingByIdempotency = await this.transactionRepository.findByIdempotencyKey(
-      input.idempotencyKey,
-    );
-    if (existingByIdempotency) {
-      return this.buildOutputFromEntity(existingByIdempotency, true);
+    const money = Money.from({
+      amount: input.moneyAmount,
+      currency: input.moneyCurrency,
+    });
+
+    const processInput: ProcessTransactionInput = {
+      idempotencyKey: input.idempotencyKey,
+      providerId: input.providerId,
+      externalTransactionId: input.externalTransactionId,
+      playerId: input.playerId,
+      walletId: input.walletId,
+      roundId: input.roundId,
+      gameId: input.gameId,
+      kind: input.kind,
+      money,
+      referenceExternalTransactionId: input.referenceExternalTransactionId,
+    };
+
+    // Check idempotency by idempotencyKey (with payload hash conflict detection)
+    const idempotencyResult = await this.idempotencyService.check(processInput);
+    if (idempotencyResult.isDuplicate && idempotencyResult.cachedResult) {
+      return {
+        transactionId: idempotencyResult.cachedResult.transactionId,
+        status: idempotencyResult.cachedResult.status as WagerTransactionStatus,
+        balance: {
+          amount: idempotencyResult.cachedResult.balanceAmount,
+          currency: idempotencyResult.cachedResult.balanceCurrency,
+        },
+        idempotentReplay: true,
+      };
     }
 
-    // Check idempotency by provider + externalTransactionId
-    const existingByProvider = await this.transactionRepository.findByProviderAndExternalId(
+    // Check idempotency by provider + externalTransactionId (secondary dedup)
+    const providerResult = await this.idempotencyService.checkByProviderExternalId(
       input.providerId,
       input.externalTransactionId,
     );
-    if (existingByProvider) {
-      return this.buildOutputFromEntity(existingByProvider, true);
+    if (providerResult.isDuplicate && providerResult.cachedResult) {
+      return {
+        transactionId: providerResult.cachedResult.transactionId,
+        status: providerResult.cachedResult.status as WagerTransactionStatus,
+        balance: {
+          amount: providerResult.cachedResult.balanceAmount,
+          currency: providerResult.cachedResult.balanceCurrency,
+        },
+        idempotentReplay: true,
+      };
     }
 
     // Process within a transaction with pessimistic lock on wallet
@@ -84,11 +122,6 @@ export class TransactionService {
       if (!walletEntity) {
         throw new WalletNotFoundError(`Wallet ${input.walletId} not found`);
       }
-
-      const money = Money.from({
-        amount: input.moneyAmount,
-        currency: input.moneyCurrency,
-      });
 
       // Rehydrate domain wallet
       const walletState = {
@@ -125,31 +158,74 @@ export class TransactionService {
           input.referenceExternalTransactionId,
         );
         if (!refTx) {
-          throw new ReferenceNotFoundError(
-            `Reference transaction ${input.referenceExternalTransactionId} not found`,
-          );
+          // Reference not found — persist as PENDING_REFERENCE
+          const txId = crypto.randomUUID();
+          const payloadHash = computePayloadHash(processInput);
+          const txEntity = this.em.create('WagerTransactionEntity', {
+            id: txId,
+            providerId: input.providerId,
+            externalTransactionId: input.externalTransactionId,
+            idempotencyKey: input.idempotencyKey,
+            payloadHash,
+            walletId: input.walletId,
+            playerId: input.playerId,
+            roundId: input.roundId,
+            gameId: input.gameId,
+            kind: input.kind,
+            moneyAmount: money.amount,
+            moneyCurrency: money.currency,
+            referenceExternalTransactionId: input.referenceExternalTransactionId,
+            status: WagerTransactionStatus.PendingReference,
+            attempts: 0,
+            nextAttemptAt: new Date(Date.now() + 5_000),
+          });
+          await this.transactionRepository.create(txEntity);
+          await this.em.flush();
+
+          return {
+            transactionId: txId,
+            status: WagerTransactionStatus.PendingReference,
+            balance: { amount: wallet.balance.amount, currency: wallet.currency },
+            idempotentReplay: false,
+          };
         }
         if (refTx.status !== WagerTransactionStatus.Processed) {
-          throw new ReferenceNotFoundError(
-            `Reference transaction ${input.referenceExternalTransactionId} is not processed`,
-          );
+          // Reference exists but not yet processed — PENDING_REFERENCE
+          const txId = crypto.randomUUID();
+          const payloadHash = computePayloadHash(processInput);
+          const txEntity = this.em.create('WagerTransactionEntity', {
+            id: txId,
+            providerId: input.providerId,
+            externalTransactionId: input.externalTransactionId,
+            idempotencyKey: input.idempotencyKey,
+            payloadHash,
+            walletId: input.walletId,
+            playerId: input.playerId,
+            roundId: input.roundId,
+            gameId: input.gameId,
+            kind: input.kind,
+            moneyAmount: money.amount,
+            moneyCurrency: money.currency,
+            referenceExternalTransactionId: input.referenceExternalTransactionId,
+            status: WagerTransactionStatus.PendingReference,
+            attempts: 0,
+            nextAttemptAt: new Date(Date.now() + 5_000),
+          });
+          await this.transactionRepository.create(txEntity);
+          await this.em.flush();
+
+          return {
+            transactionId: txId,
+            status: WagerTransactionStatus.PendingReference,
+            balance: { amount: wallet.balance.amount, currency: wallet.currency },
+            idempotentReplay: false,
+          };
         }
         referenceExternalTransactionId = input.referenceExternalTransactionId;
       }
 
       const txId = crypto.randomUUID();
-      const payloadHash = computePayloadHash({
-        idempotencyKey: input.idempotencyKey,
-        providerId: input.providerId,
-        externalTransactionId: input.externalTransactionId,
-        playerId: input.playerId,
-        walletId: input.walletId,
-        roundId: input.roundId,
-        gameId: input.gameId,
-        kind: input.kind,
-        money,
-        referenceExternalTransactionId,
-      });
+      const payloadHash = computePayloadHash(processInput);
 
       // LOSS does not affect balance — just record the transaction
       if (input.kind === WagerTransactionKind.Loss) {
@@ -168,6 +244,7 @@ export class TransactionService {
           moneyCurrency: money.currency,
           referenceExternalTransactionId,
           status: WagerTransactionStatus.Processed,
+          attempts: 0,
           processedAt: new Date(),
         });
         await this.transactionRepository.create(txEntity);
@@ -213,6 +290,7 @@ export class TransactionService {
           moneyCurrency: money.currency,
           referenceExternalTransactionId,
           status: WagerTransactionStatus.Processed,
+          attempts: 0,
           processedAt: new Date(),
         });
         await this.transactionRepository.create(txEntity);
@@ -258,6 +336,7 @@ export class TransactionService {
             referenceExternalTransactionId,
             status: WagerTransactionStatus.Rejected,
             failureCode: FailureCode.INSUFFICIENT_BALANCE,
+            attempts: 0,
             processedAt: new Date(),
           });
           await this.transactionRepository.create(txEntity);
