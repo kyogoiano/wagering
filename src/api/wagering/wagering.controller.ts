@@ -16,6 +16,7 @@ import {
 import { BusinessExceptionFilter } from '../common/filters/business-exception.filter';
 import { IdempotencyKeyGuard } from '../common/guards/idempotency-key.guard';
 import { TransactionService } from '@application/wager/transaction.service';
+import { Roles, JungleRole } from '@auth/decorators/roles.decorator';
 
 @Controller('wagering')
 @UseFilters(BusinessExceptionFilter)
@@ -23,6 +24,7 @@ export class WageringController {
   constructor(private readonly transactionService: TransactionService) {}
 
   @Post('transactions')
+  @Roles(JungleRole.ADMIN, JungleRole.OPERATOR)
   @UseInterceptors(IdempotencyKeyGuard)
   async submit(
     @Body() dto: SubmitTransactionDto,
@@ -51,6 +53,7 @@ export class WageringController {
   }
 
   @Get('transactions/:transactionId')
+  @Roles(JungleRole.ADMIN, JungleRole.OPERATOR, JungleRole.READER)
   async getById(
     @Param('transactionId') transactionId: string,
   ): Promise<TransactionDetailDto> {
@@ -68,6 +71,7 @@ export class WageringController {
   }
 
   @Get('providers/:providerId/wagering/transactions/:externalTransactionId')
+  @Roles(JungleRole.ADMIN, JungleRole.OPERATOR, JungleRole.READER)
   async getByProvider(
     @Param('providerId') providerId: string,
     @Param('externalTransactionId') externalTransactionId: string,

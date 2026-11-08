@@ -17,6 +17,8 @@ import {
 import { BusinessExceptionFilter } from '../common/filters/business-exception.filter';
 import { Money } from '@domain/money';
 import { WalletService } from '@application/wallet/wallet.service';
+import { Roles } from '@auth/decorators/roles.decorator';
+import { JungleRole } from '@auth/decorators/roles.decorator';
 
 @Controller('wallets')
 @UseFilters(BusinessExceptionFilter)
@@ -24,6 +26,7 @@ export class WalletsController {
   constructor(private readonly walletService: WalletService) {}
 
   @Post()
+  @Roles(JungleRole.ADMIN)
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() dto: CreateWalletDto): Promise<WalletResponseDto> {
     const initialBalance = Money.from({
@@ -45,6 +48,7 @@ export class WalletsController {
   }
 
   @Get(':walletId')
+  @Roles(JungleRole.ADMIN, JungleRole.OPERATOR, JungleRole.READER)
   async getById(@Param('walletId') walletId: string): Promise<WalletResponseDto> {
     const result = await this.walletService.getById(walletId);
     return {
@@ -56,6 +60,7 @@ export class WalletsController {
   }
 
   @Get(':walletId/ledger')
+  @Roles(JungleRole.ADMIN, JungleRole.OPERATOR, JungleRole.READER)
   async getLedger(
     @Param('walletId') walletId: string,
     @Query('cursor') cursor?: string,
