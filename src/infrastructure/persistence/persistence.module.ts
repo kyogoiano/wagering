@@ -9,6 +9,8 @@ import { OutboxMessageEntity } from './outbox-message.entity';
 import { WalletRepository } from './wallet.repository';
 import { WagerTransactionRepository } from './wager-transaction.repository';
 import { WalletLedgerEntryRepository } from './wallet-ledger-entry.repository';
+import { InboxMessageRepository } from './inbox-message.repository';
+import { OutboxMessageRepository } from './outbox-message.repository';
 
 @Global()
 @Module({})
@@ -69,8 +71,33 @@ export class PersistenceModule {
           },
           inject: [getRepositoryToken(WalletLedgerEntryEntity)],
         },
+        {
+          provide: InboxMessageRepository,
+          useFactory: (repo: any) => {
+            const custom = Object.create(InboxMessageRepository.prototype);
+            Object.assign(custom, repo);
+            return custom;
+          },
+          inject: [getRepositoryToken(InboxMessageEntity)],
+        },
+        {
+          provide: OutboxMessageRepository,
+          useFactory: (repo: any) => {
+            const custom = Object.create(OutboxMessageRepository.prototype);
+            Object.assign(custom, repo);
+            return custom;
+          },
+          inject: [getRepositoryToken(OutboxMessageEntity)],
+        },
       ],
-      exports: [MikroOrmModule, WalletRepository, WagerTransactionRepository, WalletLedgerEntryRepository],
+      exports: [
+        MikroOrmModule,
+        WalletRepository,
+        WagerTransactionRepository,
+        WalletLedgerEntryRepository,
+        InboxMessageRepository,
+        OutboxMessageRepository,
+      ],
     };
   }
 }

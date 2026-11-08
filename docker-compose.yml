@@ -41,5 +41,16 @@ services:
       timeout: 5s
       retries: 5
 
+  ministack:
+    image: ministackorg/ministack:latest
+    container_name: jungle-ministack
+    ports:
+      - '4566:4566'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4566']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   keycloak_data:

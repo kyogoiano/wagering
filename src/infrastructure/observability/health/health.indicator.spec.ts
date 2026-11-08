@@ -41,20 +41,40 @@ describe('Health Indicators', () => {
   });
 
   describe('SqsHealthIndicator', () => {
-    it('should return down when SQS_QUEUE_URL is not configured', async () => {
-      const original = process.env.SQS_QUEUE_URL;
-      delete process.env.SQS_QUEUE_URL;
+    it('should return down when SQS client is not available', async () => {
       const indicator = new SqsHealthIndicator();
       const result = await indicator.isHealthy();
       expect(result.status).toBe('down');
       expect(result.detail).toEqual({ sqs: 'not_configured' });
-      expect(result.error).toContain('SQS_QUEUE_URL not configured');
-      process.env.SQS_QUEUE_URL = original;
+      expect(result.error).toContain('SQS client not available');
     });
 
-    it('should return up when SQS_QUEUE_URL is configured', async () => {
-      process.env.SQS_QUEUE_URL = 'http://localhost:9324/000000000000/test-queue';
-      const indicator = new SqsHealthIndicator();
+    it('should return down when SQS connection fails', async () => {
+      const mockSqsClient = {
+        send: async () => {
+          throw new Error('Connection refused');
+        },
+      };
+      const indicator = new SqsHealthIndicator(
+        mockSqsClient as any,
+        { queueName: 'test.fifo' },
+      );
+      const result = await indicator.isHealthy();
+      expect(result.status).toBe('down');
+      expect(result.detail).toEqual({ sqs: 'error' });
+      expect(result.error).toContain('Connection refused');
+    });
+
+    it('should return up when SQS connection works', async () => {
+      const mockSqsClient = {
+        send: async () => ({
+          QueueUrl: 'http://localhost:4566/000000000000/test.fifo',
+        }),
+      };
+      const indicator = new SqsHealthIndicator(
+        mockSqsClient as any,
+        { queueName: 'test.fifo' },
+      );
       const result = await indicator.isHealthy();
       expect(result.status).toBe('up');
       expect(result.detail).toEqual({ sqs: 'ok' });
