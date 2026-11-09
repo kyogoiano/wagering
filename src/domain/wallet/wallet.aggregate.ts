@@ -88,7 +88,7 @@ export class Wallet {
     this._updatedAt = new Date();
 
     return WalletLedgerEntry.create({
-      id: `${this.id}-ledger-${transactionId}`,
+      id: crypto.randomUUID(),
       walletId: this.id,
       transactionId,
       direction: LedgerDirection.Debit,
@@ -107,7 +107,7 @@ export class Wallet {
     this._updatedAt = new Date();
 
     return WalletLedgerEntry.create({
-      id: `${this.id}-ledger-${transactionId}`,
+      id: crypto.randomUUID(),
       walletId: this.id,
       transactionId,
       direction: LedgerDirection.Credit,

@@ -11,7 +11,7 @@ export class WalletRepository extends EntityRepository<WalletEntity> {
   }
 
   async findOneForUpdate(walletId: string): Promise<WalletEntity | null> {
-    return this.em.getFork().findOne(WalletEntity, { id: walletId }, { lockMode: 'pessimistic_write' });
+    return this.findOne({ id: walletId }, { lockMode: 'pessimistic_write' });
   }
 
   async create(wallet: WalletEntity): Promise<void> {

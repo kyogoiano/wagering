@@ -1,0 +1,1 @@
+export const SQS_CLIENT_TOKEN = 'SQS_CLIENT_TOKEN';

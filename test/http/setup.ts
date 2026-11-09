@@ -11,9 +11,21 @@ process.env.DB_PASSWORD = TEST_CONFIG.password;
 process.env.DB_NAME = TEST_CONFIG.dbName;
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Module, ValidationPipe, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { APP_PIPE, APP_INTERCEPTOR } from '@nestjs/core';
+import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import request from 'supertest';
-import { AppModule } from '../../src/app/app.module';
+import { PersistenceModule } from '../../src/infrastructure/persistence/persistence.module';
+import { LoggingModule } from '../../src/infrastructure/observability/logging/logging.module';
+import { MetricsModule } from '../../src/infrastructure/observability/metrics/metrics.module';
+import { HealthModule } from '../../src/api/health/health.module';
+import { WalletsModule } from '../../src/api/wallets/wallets.module';
+import { WageringModule } from '../../src/api/wagering/wagering.module';
+import { ReconciliationModule } from '../../src/api/reconciliation/reconciliation.module';
+import { SqsModule } from '../../src/infrastructure/messaging/sqs/sqs.module';
+import { CorrelationIdInterceptor } from '../../src/api/common/interceptors/correlation-id.interceptor';
+import { HttpMetricsMiddleware } from '../../src/infrastructure/observability/metrics/http-metrics.middleware';
 import {
   initTestOrm,
   closeTestOrm,
@@ -27,8 +39,48 @@ export interface HttpTestApp {
 }
 
 /**
+ * Test AppModule without AuthModule — integration tests run without JWT auth.
+ */
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
+    // AuthModule intentionally excluded — no auth guards for integration tests
+    PersistenceModule.forRoot(),
+    LoggingModule.forRoot(),
+    MetricsModule.forRoot(),
+    HealthModule,
+    WalletsModule,
+    WageringModule,
+    ReconciliationModule,
+    SqsModule.forRoot(),
+  ],
+  providers: [
+    {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        disableErrorMessages: false,
+      }),
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CorrelationIdInterceptor,
+    },
+  ],
+})
+export class TestAppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(HttpMetricsMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}
+
+/**
  * Bootstrap the full NestJS application for HTTP integration testing.
  * Uses the test database configured in TEST_CONFIG.
+ * Auth guards are disabled to allow testing without JWT tokens.
  */
 export async function bootstrapTestApp(): Promise<HttpTestApp> {
   // Ensure test DB is available and migrations are applied
@@ -37,7 +89,7 @@ export async function bootstrapTestApp(): Promise<HttpTestApp> {
   await orm.close();
 
   const moduleRef: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
+    imports: [TestAppModule],
   }).compile();
 
   const app = moduleRef.createNestApplication({

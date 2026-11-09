@@ -1,17 +1,19 @@
-import { DynamicModule, Module, OnModuleInit } from '@nestjs/common';
+import { DynamicModule, Module, OnModuleInit, Inject } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SQSClient } from '@aws-sdk/client-sqs';
 import sqsConfig from './sqs.config';
-import { createSqsClient, ensureQueuesExist, SqsConfig } from './sqs-client.factory';
+import { createSqsClient, ensureQueuesExist } from './sqs-client.factory';
+import type { SqsConfig } from './sqs-client.factory';
 import { SqsConsumerService } from './consumer/sqs-consumer.service';
 import { OutboxPublisherWorker } from './outbox/outbox-publisher.worker';
 import { InboxMessageRepository } from '@infrastructure/persistence/inbox-message.repository';
 import { OutboxMessageRepository } from '@infrastructure/persistence/outbox-message.repository';
 import { TransactionService } from '@application/wager/transaction.service';
 import { IdempotencyService } from '@application/idempotency/idempotency.service';
+import { SQS_CLIENT_TOKEN } from './sqs.tokens';
 
-const SQS_CLIENT_TOKEN = 'SQS_CLIENT_TOKEN';
+const SQS_CONSUMER_CONFIG_TOKEN = 'SQS_CONSUMER_CONFIG_TOKEN';
 
 @Module({})
 export class SqsModule implements OnModuleInit {
@@ -30,6 +32,16 @@ export class SqsModule implements OnModuleInit {
           useFactory: (config: SqsConfig) => createSqsClient(config),
           inject: [sqsConfig.KEY],
         },
+        {
+          provide: SQS_CONSUMER_CONFIG_TOKEN,
+          useFactory: (config: SqsConfig) => ({
+            queueName: config.queueName,
+            consumerName: config.consumerName,
+            visibilityTimeoutSeconds: config.visibilityTimeoutSeconds,
+            pollingIntervalMs: config.pollingIntervalMs,
+          }),
+          inject: [sqsConfig.KEY],
+        },
         SqsConsumerService,
         OutboxPublisherWorker,
         InboxMessageRepository,
@@ -42,7 +54,8 @@ export class SqsModule implements OnModuleInit {
   }
 
   constructor(
-    private readonly config: ConfigType<typeof sqsConfig>,
+    @Inject(sqsConfig.KEY)
+    private readonly config: SqsConfig,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -57,4 +70,3 @@ export class SqsModule implements OnModuleInit {
   }
 }
 
-export { SQS_CLIENT_TOKEN };
