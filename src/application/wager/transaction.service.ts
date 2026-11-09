@@ -386,6 +386,7 @@ export class TransactionService {
       case WagerTransactionKind.Loss:
         return LedgerDirection.Debit;
       case WagerTransactionKind.Win:
+      case WagerTransactionKind.Credit:
       case WagerTransactionKind.Refund:
       case WagerTransactionKind.Rollback:
       case WagerTransactionKind.Opening:

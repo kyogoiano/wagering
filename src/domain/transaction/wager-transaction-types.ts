@@ -3,6 +3,7 @@ export enum WagerTransactionKind {
   Bet = 'BET',
   Win = 'WIN',
   Loss = 'LOSS',
+  Credit = 'CREDIT',
   Refund = 'REFUND',
   Rollback = 'ROLLBACK',
 }

@@ -1,7 +1,10 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } from '@aws-sdk/client-sqs';
 import { InboxMessageRepository } from '@infrastructure/persistence/inbox-message.repository';
 import { TransactionService, SubmitTransactionInput } from '@application/wager/transaction.service';
+import { SQS_CLIENT_TOKEN } from '../sqs.tokens';
+
+const SQS_CONSUMER_CONFIG_TOKEN = 'SQS_CONSUMER_CONFIG_TOKEN';
 import { InsufficientBalanceError, InvalidAmountError, InvalidCurrencyError, InvalidTransactionStateError, ReferenceNotFoundError, WalletNotFoundError, WalletAlreadyExistsError } from '@domain/errors/domain.error';
 
 interface SqsConsumerConfig {
@@ -41,7 +44,9 @@ export class SqsConsumerService implements OnModuleInit {
   private activeMessages = 0;
 
   constructor(
+    @Inject(SQS_CLIENT_TOKEN)
     private readonly sqsClient: SQSClient,
+    @Inject(SQS_CONSUMER_CONFIG_TOKEN)
     private readonly config: SqsConsumerConfig,
     private readonly inboxRepository: InboxMessageRepository,
     private readonly transactionService: TransactionService,
