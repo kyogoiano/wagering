@@ -17,12 +17,13 @@ export class InboxMessageRepository extends EntityRepository<InboxMessageEntity>
       existing.processedAt = new Date();
       return;
     }
-    const entity = new this.class;
-    entity.messageId = messageId;
-    entity.consumerName = consumerName;
-    entity.payloadHash = payloadHash;
-    entity.receivedAt = occurredAt;
-    entity.processedAt = new Date();
+    const entity = this.em.create(InboxMessageEntity, {
+      messageId,
+      consumerName,
+      payloadHash,
+      receivedAt: occurredAt,
+      processedAt: new Date(),
+    });
     this.em.persist(entity);
     await this.em.flush();
   }

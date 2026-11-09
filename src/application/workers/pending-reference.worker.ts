@@ -151,7 +151,7 @@ export class PendingReferenceWorker {
 
       // Persist ledger entry
       const ledgerState = ledgerEntry.toJSON();
-      const ledgerEntity = this.em.create('WalletLedgerEntryEntity', {
+      const ledgerEntity = Object.assign(new WalletLedgerEntryEntity(), {
         id: ledgerState.id,
         walletId: tx.walletId,
         transactionId: txId,
@@ -161,7 +161,7 @@ export class PendingReferenceWorker {
         balanceBefore: ledgerState.balanceBefore,
         balanceAfter: ledgerState.balanceAfter,
       });
-      await this.ledgerRepository.create(ledgerEntity);
+      await this.ledgerRepository.persistAndFlush(ledgerEntity);
 
       await this.em.flush();
     });

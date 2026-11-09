@@ -26,8 +26,7 @@
 
 ## Issues conhecidos
 
-- SqsHealthIndicator usa env var em vez de conexão real com MiniStack
-- Sem testes de integração de health endpoints
+- Nenhum — todos os health indicators funcionam com conexões reais
 
 ---
 

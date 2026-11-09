@@ -1,77 +1,86 @@
 import {describe, expect, it, mock} from 'bun:test';
 import {OutboxPublisherWorker} from './outbox-publisher.worker';
-import {OutboxMessageRepository} from '@infrastructure/persistence/outbox-message.repository';
+import {OutboxMessageEntity} from '@infrastructure/persistence/outbox-message.entity';
 
 describe('OutboxPublisherWorker', () => {
-  const buildMockRepo = () => {
-    return {
-      findPendingDue: mock(() => Promise.resolve([])),
-      markAsPublished: mock(() => Promise.resolve()),
-      retryLater: mock(() => Promise.resolve()),
-    } as unknown as OutboxMessageRepository;
+  const buildMockEm = () => {
+    const em = {
+      find: mock(() => Promise.resolve([])),
+      persist: mock(() => {}),
+      flush: mock(() => Promise.resolve()),
+    };
+    return em;
   };
+
+  const buildMockOrm = (em: any) => ({
+    em: { fork: () => em },
+  });
 
   describe('publish', () => {
     it('should do nothing when no pending messages', async () => {
-      const repo = buildMockRepo();
-      const worker = new OutboxPublisherWorker(repo);
+      const em = buildMockEm();
+      const orm = buildMockOrm(em);
+      const worker = new OutboxPublisherWorker(orm as any);
       await worker.publish();
-      expect(repo.findPendingDue).toHaveBeenCalledTimes(1);
-      expect(repo.markAsPublished).not.toHaveBeenCalled();
+      expect(em.find).toHaveBeenCalledTimes(1);
+      expect(em.persist).not.toHaveBeenCalled();
     });
 
     it('should publish pending messages', async () => {
-      const repo = buildMockRepo();
       const message = {
         id: 'outbox-1',
         type: 'WagerTransactionProcessed',
         payload: JSON.stringify({ transactionId: 'tx-1' }),
         attempts: 0,
       };
-      repo.findPendingDue.mockResolvedValue([message]);
-
-      const worker = new OutboxPublisherWorker(repo);
+      const em = buildMockEm();
+      em.find.mockResolvedValue([message]);
+      const orm = buildMockOrm(em);
+      const worker = new OutboxPublisherWorker(orm as any);
       await worker.publish();
 
-      expect(repo.findPendingDue).toHaveBeenCalledTimes(1);
-      expect(repo.markAsPublished).toHaveBeenCalledWith(message);
+      expect(em.find).toHaveBeenCalledTimes(1);
+      expect(em.persist).toHaveBeenCalledWith(message);
+      expect(em.flush).toHaveBeenCalledTimes(1);
     });
 
     it('should retry with backoff on publish failure', async () => {
-      const repo = buildMockRepo();
       const message = {
         id: 'outbox-1',
         type: 'WagerTransactionProcessed',
-        payload: 'invalid json',
+        payload: JSON.stringify({ transactionId: 'tx-1' }),
         attempts: 0,
       };
-      repo.findPendingDue.mockResolvedValue([message]);
-
-      const worker = new OutboxPublisherWorker(repo);
+      const em = buildMockEm();
+      em.find.mockResolvedValue([message]);
+      // First flush fails (publish), second flush succeeds (retry save)
+      em.flush.mockRejectedValueOnce(new Error('publish failed')).mockResolvedValueOnce(undefined);
+      const orm = buildMockOrm(em);
+      const worker = new OutboxPublisherWorker(orm as any);
       await worker.publish();
 
-      expect(repo.retryLater).toHaveBeenCalled();
-      const retryCall = (repo.retryLater as any).mock.calls[0];
-      expect(retryCall[1]).toBe(1); // attempts incremented
-      expect(retryCall[2] instanceof Date).toBe(true); // nextAttemptAt is a Date
+      // persist called twice (once for publish, once for retry)
+      expect(em.persist).toHaveBeenCalledTimes(2);
+      expect(message.attempts).toBe(1);
+      expect(message.nextAttemptAt instanceof Date).toBe(true);
     });
 
     it('should cap backoff at max delay', async () => {
-      const repo = buildMockRepo();
       const message = {
         id: 'outbox-1',
         type: 'WagerTransactionProcessed',
-        payload: 'invalid json',
-        attempts: 10, // High attempt count
+        payload: JSON.stringify({ transactionId: 'tx-1' }),
+        attempts: 10,
       };
-      repo.findPendingDue.mockResolvedValue([message]);
-
-      const worker = new OutboxPublisherWorker(repo);
+      const em = buildMockEm();
+      em.find.mockResolvedValue([message]);
+      em.flush.mockRejectedValueOnce(new Error('publish failed')).mockResolvedValueOnce(undefined);
+      const orm = buildMockOrm(em);
+      const worker = new OutboxPublisherWorker(orm as any);
       await worker.publish();
 
-      const retryCall = (repo.retryLater as any).mock.calls[0];
-      expect(retryCall[1]).toBe(11); // attempts incremented
-      const delay = retryCall[2].getTime() - Date.now();
+      expect(message.attempts).toBe(11);
+      const delay = message.nextAttemptAt.getTime() - Date.now();
       expect(delay).toBeLessThanOrEqual(60_000); // max 60s
     });
   });

@@ -28,7 +28,7 @@ export class WalletLedgerEntryRepository extends EntityRepository<WalletLedgerEn
 
     const entries = await this.find(where, {
       limit: fetchLimit,
-      order: { createdAt: QueryOrder.ASC },
+      orderBy: { createdAt: QueryOrder.ASC },
     });
 
     let nextCursor: string | null = null;
@@ -48,10 +48,10 @@ export class WalletLedgerEntryRepository extends EntityRepository<WalletLedgerEn
   }
 
   async findByWalletIdForReconciliation(walletId: string): Promise<WalletLedgerEntryEntity[]> {
-    return this.find({ walletId }, { order: { createdAt: QueryOrder.ASC } });
+    return this.find({ walletId }, { orderBy: { createdAt: QueryOrder.ASC } });
   }
 
-  async create(entry: WalletLedgerEntryEntity): Promise<void> {
+  async persistAndFlush(entry: WalletLedgerEntryEntity): Promise<void> {
     this.em.persist(entry);
     await this.em.flush();
   }

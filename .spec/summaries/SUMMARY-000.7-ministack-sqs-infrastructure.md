@@ -54,8 +54,8 @@
 
 ## Issues Conhecidos
 
-- O SqsConsumerService não inicia automaticamente se o MiniStack não estiver rodando (warning no console)
-- O PendingReferenceWorker ainda não está registrado no AppModule — requer PostgreSQL rodando
+- O SqsConsumerService não inicia se o MiniStack não estiver rodando (warning no console)
+- O OutboxPublisherWorker usa `orm.em.fork()` para evitar o erro de contexto global do MikroORM v7
 
 ## Manual de Execução
 

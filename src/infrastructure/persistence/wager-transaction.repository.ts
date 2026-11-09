@@ -31,7 +31,7 @@ export class WagerTransactionRepository extends EntityRepository<WagerTransactio
     });
   }
 
-  async create(transaction: WagerTransactionEntity): Promise<void> {
+  async persistAndFlush(transaction: WagerTransactionEntity): Promise<void> {
     this.em.persist(transaction);
     await this.em.flush();
   }

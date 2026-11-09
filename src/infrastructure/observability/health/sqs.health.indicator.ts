@@ -1,12 +1,8 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SQSClient, GetQueueUrlCommand } from '@aws-sdk/client-sqs';
 import { HealthIndicatorResult } from './postgres.health.indicator';
-
-const SQS_CLIENT_TOKEN = 'SQS_CLIENT_TOKEN';
-
-interface SqsHealthConfig {
-  queueName: string;
-}
+import { SQS_CLIENT_TOKEN } from '@infrastructure/messaging/sqs/sqs.tokens';
 
 @Injectable()
 export class SqsHealthIndicator {
@@ -14,21 +10,21 @@ export class SqsHealthIndicator {
     @Optional()
     @Inject(SQS_CLIENT_TOKEN)
     private readonly sqsClient: SQSClient | undefined,
-    @Optional()
-    private readonly config: SqsHealthConfig | undefined,
+    private readonly configService: ConfigService,
   ) {}
 
   async isHealthy(): Promise<HealthIndicatorResult> {
     try {
-      if (!this.sqsClient || !this.config) {
+      if (!this.sqsClient) {
         return {
           status: 'down',
           detail: { sqs: 'not_configured' },
           error: 'SQS client not available',
         };
       }
+      const queueName = this.configService.get<string>('sqs.queueName', 'wager-transactions.fifo');
       await this.sqsClient.send(
-        new GetQueueUrlCommand({ QueueName: this.config.queueName }),
+        new GetQueueUrlCommand({ QueueName: queueName }),
       );
       return {
         status: 'up',

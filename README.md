@@ -23,20 +23,61 @@ Serviço financeiro distribuído que processa transações de apostas recebidas 
 
 ## Setup Rápido
 
+### Opção 1: Docker Compose (tudo em containers)
+
+A maneira mais fácil de rodar o projeto completo com todos os serviços:
+
+```bash
+# 1. Iniciar todos os 5 serviços (DB, SQS, Keycloak, App)
+docker compose up -d
+
+# 2. Verificar status (todos devem estar "healthy")
+docker compose ps
+
+# 3. Ver logs da aplicação
+docker compose logs -f jungle-app
+
+# 4. Parar tudo
+docker compose down
+
+# 5. Parar e limpar dados (reset completo)
+docker compose down -v
+```
+
+**Serviços incluídos:**
+
+| Serviço | Imagem | Porta | Descrição |
+|---------|--------|-------|-----------|
+| `jungle-db` | postgres:16-alpine | 5432 | Banco PostgreSQL da aplicação |
+| `ministack` | ministackorg/ministack | 4566 | Emulador local AWS SQS |
+| `keycloak-db` | postgres:16-alpine | 5433 | Banco do Keycloak |
+| `keycloak` | quay.io/keycloak/keycloak:26.8 | 8080 | Identity Provider (OIDC) |
+| `jungle-app` | Dockerfile (Bun + NestJS) | 3000 | API Jungle |
+
+As migrations SQL são aplicadas automaticamente na primeira inicialização do banco.
+
+### Opção 2: Desenvolvimento local
+
 ```bash
 # 1. Instalar dependências
 bun install
 
-# 2. Iniciar infraestrutura (PostgreSQL, MiniStack, Keycloak)
-docker-compose up -d
+# 2. Iniciar infraestrutura (sem a app)
+docker compose up -d jungle-db ministack keycloak-db keycloak
 
 # 3. Aguardar serviços ficarem saudáveis
-# PostgreSQL: localhost:5432
-# MiniStack:  localhost:4566
-# Keycloak:   localhost:8080
+docker compose ps
 
-# 4. Iniciar a aplicação
-bun run start
+# 4. Iniciar a aplicação em modo desenvolvimento
+bun run dev
+```
+
+### Opção 3: Apenas infraestrutura
+
+Para rodar apenas os serviços de infraestrutura (sem a app):
+
+```bash
+docker compose up -d jungle-db ministack keycloak-db keycloak
 ```
 
 ## Variáveis de Ambiente
@@ -70,6 +111,7 @@ Copie `.env.example` para `.env` e ajuste conforme necessário:
 | `bun test src/` | Executa testes de unidade |
 | `bun test test/http/` | Executa testes HTTP de integração (requer banco) |
 | `bun test test/integration/` | Executa testes de integração com banco |
+| `./scripts/smoke-test.sh` | Smoke test completo (25 testes: health, auth, wallets, wagering, ledger, reconciliation, metrics, RBAC) |
 
 ## API Endpoints
 

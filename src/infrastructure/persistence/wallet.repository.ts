@@ -1,4 +1,4 @@
-import { EntityRepository } from '@mikro-orm/core';
+import { EntityRepository, LockMode } from '@mikro-orm/core';
 import { WalletEntity } from './wallet.entity';
 
 export class WalletRepository extends EntityRepository<WalletEntity> {
@@ -11,10 +11,10 @@ export class WalletRepository extends EntityRepository<WalletEntity> {
   }
 
   async findOneForUpdate(walletId: string): Promise<WalletEntity | null> {
-    return this.findOne({ id: walletId }, { lockMode: 'pessimistic_write' });
+    return this.findOne({ id: walletId }, { lockMode: LockMode.PESSIMISTIC_WRITE });
   }
 
-  async create(wallet: WalletEntity): Promise<void> {
+  async persistAndFlush(wallet: WalletEntity): Promise<void> {
     this.em.persist(wallet);
     await this.em.flush();
   }

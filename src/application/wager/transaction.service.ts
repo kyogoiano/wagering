@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
+import { EntityManager } from '@mikro-orm/postgresql';
 import { WalletRepository } from '@infrastructure/persistence/wallet.repository';
 import { WagerTransactionRepository } from '@infrastructure/persistence/wager-transaction.repository';
 import { WalletLedgerEntryRepository } from '@infrastructure/persistence/wallet-ledger-entry.repository';
+import { WagerTransactionEntity } from '@infrastructure/persistence/wager-transaction.entity';
+import { WalletLedgerEntryEntity } from '@infrastructure/persistence/wallet-ledger-entry.entity';
 import { Money } from '@domain/money';
 import { Wallet } from '@domain/wallet';
 import {
@@ -57,15 +59,13 @@ export interface TransactionDetailOutput {
 
 @Injectable()
 export class TransactionService {
-  private em: EntityManager;
   constructor(
     private readonly walletRepository: WalletRepository,
     private readonly transactionRepository: WagerTransactionRepository,
     private readonly ledgerRepository: WalletLedgerEntryRepository,
     private readonly idempotencyService: IdempotencyService,
-  ) {
-    this.em = walletRepository.em;
-  }
+    private readonly em: EntityManager,
+  ) {}
 
   async submit(input: SubmitTransactionInput): Promise<SubmitTransactionOutput> {
     const money = Money.from({
@@ -163,7 +163,7 @@ export class TransactionService {
           // Reference not found — persist as PENDING_REFERENCE
           const txId = crypto.randomUUID();
           const payloadHash = computePayloadHash(processInput);
-          const txEntity = this.em.create('WagerTransactionEntity', {
+          const txEntity = Object.assign(new WagerTransactionEntity(), {
             id: txId,
             providerId: input.providerId,
             externalTransactionId: input.externalTransactionId,
@@ -181,8 +181,7 @@ export class TransactionService {
             attempts: 0,
             nextAttemptAt: new Date(Date.now() + 5_000),
           });
-          await this.transactionRepository.create(txEntity);
-          await this.em.flush();
+          await this.transactionRepository.persistAndFlush(txEntity);
 
           return {
             transactionId: txId,
@@ -195,7 +194,7 @@ export class TransactionService {
           // Reference exists but not yet processed — PENDING_REFERENCE
           const txId = crypto.randomUUID();
           const payloadHash = computePayloadHash(processInput);
-          const txEntity = this.em.create('WagerTransactionEntity', {
+          const txEntity = Object.assign(new WagerTransactionEntity(), {
             id: txId,
             providerId: input.providerId,
             externalTransactionId: input.externalTransactionId,
@@ -213,8 +212,7 @@ export class TransactionService {
             attempts: 0,
             nextAttemptAt: new Date(Date.now() + 5_000),
           });
-          await this.transactionRepository.create(txEntity);
-          await this.em.flush();
+          await this.transactionRepository.persistAndFlush(txEntity);
 
           return {
             transactionId: txId,
@@ -231,7 +229,7 @@ export class TransactionService {
 
       // LOSS does not affect balance — just record the transaction
       if (input.kind === WagerTransactionKind.Loss) {
-        const txEntity = this.em.create('WagerTransactionEntity', {
+        const txEntity = Object.assign(new WagerTransactionEntity(), {
           id: txId,
           providerId: input.providerId,
           externalTransactionId: input.externalTransactionId,
@@ -249,8 +247,7 @@ export class TransactionService {
           attempts: 0,
           processedAt: new Date(),
         });
-        await this.transactionRepository.create(txEntity);
-        await this.em.flush();
+        await this.transactionRepository.persistAndFlush(txEntity);
 
         return {
           transactionId: txId,
@@ -277,7 +274,7 @@ export class TransactionService {
         walletEntity.version = updatedState.version;
 
         // Persist transaction
-        const txEntity = this.em.create('WagerTransactionEntity', {
+        const txEntity = Object.assign(new WagerTransactionEntity(), {
           id: txId,
           providerId: input.providerId,
           externalTransactionId: input.externalTransactionId,
@@ -295,11 +292,11 @@ export class TransactionService {
           attempts: 0,
           processedAt: new Date(),
         });
-        await this.transactionRepository.create(txEntity);
+        await this.transactionRepository.persistAndFlush(txEntity);
 
         // Persist ledger entry
         const ledgerState = ledgerEntry.toJSON();
-        const ledgerEntity = this.em.create('WalletLedgerEntryEntity', {
+        const ledgerEntity = Object.assign(new WalletLedgerEntryEntity(), {
           id: ledgerState.id,
           walletId: input.walletId,
           transactionId: txId,
@@ -309,7 +306,7 @@ export class TransactionService {
           balanceBefore: ledgerState.balanceBefore,
           balanceAfter: ledgerState.balanceAfter,
         });
-        await this.ledgerRepository.create(ledgerEntity);
+        await this.ledgerRepository.persistAndFlush(ledgerEntity);
 
         await this.em.flush();
 
@@ -322,7 +319,7 @@ export class TransactionService {
       } catch (error) {
         if (error instanceof InsufficientBalanceError) {
           // Persist rejected transaction
-          const txEntity = this.em.create('WagerTransactionEntity', {
+          const txEntity = Object.assign(new WagerTransactionEntity(), {
             id: txId,
             providerId: input.providerId,
             externalTransactionId: input.externalTransactionId,
@@ -341,8 +338,7 @@ export class TransactionService {
             attempts: 0,
             processedAt: new Date(),
           });
-          await this.transactionRepository.create(txEntity);
-          await this.em.flush();
+          await this.transactionRepository.persistAndFlush(txEntity);
 
           return {
             transactionId: txId,

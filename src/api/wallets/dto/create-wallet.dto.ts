@@ -13,7 +13,7 @@ export class MoneyDto {
 }
 
 export class CreateWalletDto {
-  @IsUUID('4')
+  @IsUUID()
   playerId!: string;
 
   @IsObject()

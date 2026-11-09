@@ -1,8 +1,76 @@
+# Jungle — Distributed Wagering Processor
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose up -d jungle-db ministack  # Start only infra (no app)
+#   docker compose up -d jungle-app  # Start app with existing infra
+#   docker compose logs -f jungle-app  # Tail app logs
+#   docker compose down           # Stop and remove containers
+#   docker compose down -v        # Stop and remove volumes (reset DBs)
+
 services:
+
+  # ─── Jungle Application Database ───────────────────────────────────────
+  jungle-db:
+    image: postgres:16-alpine
+    container_name: jungle-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jungle
+      POSTGRES_USER: wallet
+      POSTGRES_PASSWORD: wallet
+    ports:
+      - '5432:5432'
+    volumes:
+      - jungle_db_data:/var/lib/postgresql/data
+      # Auto-run migrations on first start
+      - ./src/infrastructure/persistence/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U wallet -d jungle']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  # ─── MiniStack (Local AWS SQS) ─────────────────────────────────────────
+  ministack:
+    image: ministackorg/ministack:latest
+    container_name: jungle-ministack
+    restart: unless-stopped
+    ports:
+      - '4566:4566'
+    healthcheck:
+      test: ['CMD', 'python3', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:4566')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # ─── Keycloak Database ─────────────────────────────────────────────────
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: jungle-keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak_password
+    ports:
+      - '5433:5432'
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U keycloak']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # ─── Keycloak (OIDC Identity Provider) ─────────────────────────────────
   keycloak:
     image: quay.io/keycloak/keycloak:26.8
     container_name: jungle-keycloak
-    command: start-dev
+    restart: unless-stopped
+    command: start-dev --import-realm
     ports:
       - '8080:8080'
     environment:
@@ -19,38 +87,66 @@ services:
       keycloak-db:
         condition: service_healthy
     healthcheck:
-      test: ['CMD-SHELL', 'curl -f http://localhost:8080/auth/realms/master || exit 1']
+      test:
+        [
+          "CMD-SHELL",
+          "sh -c 'echo \"import java.net.*;public class H{public static void main(String[]a)throws Exception{var c=(HttpURLConnection)new java.net.URL(\\\"http://localhost:8080/auth/realms/master\\\").openConnection();c.setRequestMethod(\\\"GET\\\");System.exit(c.getResponseCode()==200?0:1);}}\" > /tmp/H.java && /usr/lib/jvm/java-21-openjdk-21.0.13.0.9-1.2.el9.x86_64/bin/java /tmp/H.java'",
+        ]
+      interval: 10s
+      timeout: 15s
+      retries: 15
+      start_period: 60s
+
+  # ─── Jungle API (NestJS + Bun) ─────────────────────────────────────────
+  jungle-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jungle-app
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      # Database
+      DB_HOST: jungle-db
+      DB_PORT: '5432'
+      DB_USER: wallet
+      DB_PASSWORD: wallet
+      DB_NAME: jungle
+      # SQS (MiniStack)
+      AWS_ENDPOINT_URL: http://ministack:4566
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      SQS_QUEUE_NAME: wager-transactions.fifo
+      SQS_DLQ_NAME: wager-transactions-dlq.fifo
+      SQS_POLLING_INTERVAL_MS: '1000'
+      SQS_VISIBILITY_TIMEOUT: '30'
+      # Keycloak / OIDC
+      KEYCLOAK_ISSUER: http://localhost:8080/auth/realms/jungle
+      KEYCLOAK_INTERNAL_URL: http://keycloak:8080
+      KEYCLOAK_CLIENT_ID: jungle-api
+      KEYCLOAK_CLIENT_SECRET: change-me-in-production
+      KEYCLOAK_AUDIENCE: jungle-api
+      JWK_CACHE_TTL: '3600'
+      # App
+      PORT: '3000'
+      NODE_ENV: production
+      LOG_LEVEL: info
+    depends_on:
+      jungle-db:
+        condition: service_healthy
+      ministack:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3000/health/live || exit 1']
       interval: 10s
       timeout: 5s
-      retries: 10
-
-  keycloak-db:
-    image: postgres:16
-    container_name: jungle-keycloak-db
-    environment:
-      POSTGRES_DB: keycloak
-      POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: keycloak_password
-    ports:
-      - '5433:5432'
-    volumes:
-      - keycloak_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U keycloak']
-      interval: 5s
-      timeout: 5s
       retries: 5
-
-  ministack:
-    image: ministackorg/ministack:latest
-    container_name: jungle-ministack
-    ports:
-      - '4566:4566'
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:4566']
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      start_period: 30s
 
 volumes:
+  jungle_db_data:
   keycloak_data:
