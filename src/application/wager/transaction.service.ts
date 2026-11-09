@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { EntityManager } from '@mikro-orm/core';
+import { EntityManager } from '@mikro-orm/postgresql';
 import { WalletRepository } from '@infrastructure/persistence/wallet.repository';
 import { WagerTransactionRepository } from '@infrastructure/persistence/wager-transaction.repository';
 import { WalletLedgerEntryRepository } from '@infrastructure/persistence/wallet-ledger-entry.repository';
@@ -57,15 +57,13 @@ export interface TransactionDetailOutput {
 
 @Injectable()
 export class TransactionService {
-  private em: EntityManager;
   constructor(
     private readonly walletRepository: WalletRepository,
     private readonly transactionRepository: WagerTransactionRepository,
     private readonly ledgerRepository: WalletLedgerEntryRepository,
     private readonly idempotencyService: IdempotencyService,
-  ) {
-    this.em = walletRepository.em;
-  }
+    private readonly em: EntityManager,
+  ) {}
 
   async submit(input: SubmitTransactionInput): Promise<SubmitTransactionOutput> {
     const money = Money.from({

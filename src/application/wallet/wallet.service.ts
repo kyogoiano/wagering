@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { EntityManager } from '@mikro-orm/postgresql';
 import { WalletRepository } from '@infrastructure/persistence/wallet.repository';
 import { WagerTransactionRepository } from '@infrastructure/persistence/wager-transaction.repository';
 import { WalletLedgerEntryRepository } from '@infrastructure/persistence/wallet-ledger-entry.repository';
@@ -51,6 +52,7 @@ export class WalletService {
     private readonly walletRepository: WalletRepository,
     private readonly transactionRepository: WagerTransactionRepository,
     private readonly ledgerRepository: WalletLedgerEntryRepository,
+    private readonly em: EntityManager,
   ) {}
 
   async create(input: CreateWalletInput): Promise<CreateWalletOutput> {
@@ -74,7 +76,7 @@ export class WalletService {
     const state = wallet.toJSON();
 
     // Persist wallet entity
-    const walletEntity = this.walletRepository.em.create('WalletEntity', {
+    const walletEntity = this.em.create('WalletEntity', {
       id: walletId,
       playerId: input.playerId,
       currency: state.currency,
@@ -87,7 +89,7 @@ export class WalletService {
     // If there's an opening balance, create OPENING transaction and ledger entry
     if (input.initialBalance.isGreaterThan(Money.from({ amount: '0', currency: input.initialBalance.currency }))) {
       const txId = crypto.randomUUID();
-      const txEntity = this.walletRepository.em.create('WagerTransactionEntity', {
+      const txEntity = this.em.create('WagerTransactionEntity', {
         id: txId,
         providerId: 'system',
         externalTransactionId: `opening-${walletId}`,
@@ -117,7 +119,7 @@ export class WalletService {
       });
       const ledgerState = ledgerEntry.toJSON();
 
-      const ledgerEntity = this.walletRepository.em.create('WalletLedgerEntryEntity', {
+      const ledgerEntity = this.em.create('WalletLedgerEntryEntity', {
         id: ledgerState.id,
         walletId,
         transactionId: txId,
@@ -130,7 +132,7 @@ export class WalletService {
       await this.ledgerRepository.create(ledgerEntity);
     }
 
-    await this.walletRepository.em.flush();
+    await this.em.flush();
 
     return {
       id: state.id,
