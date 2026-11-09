@@ -213,7 +213,7 @@ else
 fi
 
 # Decodificar payload do JWT para verificar roles
-ADMIN_ROLES=$(echo "$ADMIN_TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | grep -oP '"jungle-admin"' || echo "")
+ADMIN_ROLES=$(echo "$ADMIN_TOKEN" | cut -d'.' -f2 | base64 -d 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); roles=d.get('realm_access',{}).get('roles',[]); print('jungle-admin' if 'jungle-admin' in roles else '')" 2>/dev/null || echo "")
 if [ -n "$ADMIN_ROLES" ]; then
   pass "Token ADMIN contém role 'jungle-admin'"
 else
@@ -243,7 +243,7 @@ WALLET_HTTP=$(echo "$WALLET_RESPONSE" | tail -1)
 if [ "$WALLET_HTTP" = "201" ]; then
   pass "POST /wallets → 201 (wallet criada)"
   info "Body: $WALLET_BODY"
-  WALLET_ID=$(echo "$WALLET_BODY" | grep -oP '"id":\K"[^"]+' || echo "")
+  WALLET_ID=$(echo "$WALLET_BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" 2>/dev/null || echo "")
   info "Wallet ID: $WALLET_ID"
 else
   fail "POST /wallets → esperado 201, got $WALLET_HTTP"
@@ -333,7 +333,7 @@ else
   if [ "$BET_HTTP" = "201" ]; then
     pass "POST /wagering/transactions (BET R\$50) → 201"
     info "Body: $BET_BODY"
-    TX_ID_BET=$(echo "$BET_BODY" | grep -oP '"transactionId":\K"[^"]+' || echo "")
+    TX_ID_BET=$(echo "$BET_BODY" | python3 -c "import sys,json; print(json.load(sys.stdin).get('transactionId',''))" 2>/dev/null || echo "")
   else
     fail "POST /wagering/transactions (BET) → esperado 201, got $BET_HTTP"
     info "Body: $BET_BODY"
@@ -363,7 +363,7 @@ else
 
   if [ "$BET_REPLAY_HTTP" = "200" ] || [ "$BET_REPLAY_HTTP" = "201" ]; then
     # Verifica se é replay idempotente
-    IS_REPLAY=$(echo "$BET_REPLAY_BODY" | grep -oP '"idempotentReplay":\Ktrue' || echo "")
+    IS_REPLAY=$(echo "$BET_REPLAY_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print('true' if d.get('idempotentReplay') else '')" 2>/dev/null || echo "")
     if [ -n "$IS_REPLAY" ]; then
       pass "Idempotência: replay retorna idempotentReplay=true"
     else
@@ -511,8 +511,8 @@ else
 
   if [ "$LEDGER_HTTP" = "200" ]; then
     pass "GET /wallets/:id/ledger → 200"
-    # Contar entries
-    ENTRY_COUNT=$(echo "$LEDGER_BODY" | grep -oP '"transactionId"' | wc -l)
+    # Contar entries — response is {"entries": [...]}
+    ENTRY_COUNT=$(echo "$LEDGER_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); entries=d.get('entries',d) if isinstance(d,dict) else d; print(len(entries) if isinstance(entries,list) else 0)" 2>/dev/null || echo "0")
     info "Entries no ledger: $ENTRY_COUNT"
     info "Primeira entry: $(echo "$LEDGER_BODY" | head -c 200)"
   else
@@ -534,7 +534,7 @@ else
     pass "POST /wallets/:id/reconciliation → 200"
     info "Body: $RECON_BODY"
     # Verificar se está consistente
-    IS_CONSISTENT=$(echo "$RECON_BODY" | grep -oP '"consistent":\Ktrue' || echo "")
+    IS_CONSISTENT=$(echo "$RECON_BODY" | python3 -c "import sys,json; d=json.load(sys.stdin); print('true' if d.get('consistent') else '')" 2>/dev/null || echo "")
     if [ -n "$IS_CONSISTENT" ]; then
       pass "Reconciliation: wallet consistente (saldo = soma do ledger)"
     else
@@ -561,7 +561,7 @@ else
 
   if [ "$WALLET2_HTTP" = "201" ]; then
     pass "POST /wallets (segunda wallet) → 201"
-    WALLET_2_ID=$(echo "$WALLET2_BODY" | grep -oP '"id":\K"[^"]+' || echo "")
+    WALLET_2_ID=$(echo "$WALLET2_BODY" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])" 2>/dev/null || echo "")
     info "Wallet 2 ID: $WALLET_2_ID"
   else
     fail "POST /wallets (segunda wallet) → esperado 201, got $WALLET2_HTTP"
@@ -595,7 +595,7 @@ else
 
     # Verificar que wallet 1 não foi afetada
     WALLET1_BALANCE=$(curl -s -H "Authorization: Bearer ${ADMIN_TOKEN}" \
-      "http://${APP_HOST}/wallets/${WALLET_ID}" | grep -oP '"balance":\K"[^"]+' || echo "")
+      "http://${APP_HOST}/wallets/${WALLET_ID}" | python3 -c "import sys,json; b=json.load(sys.stdin).get('balance',{}); print(b.get('amount','') if isinstance(b,dict) else b)" 2>/dev/null || echo "")
     info "Wallet 1 balance após BET na wallet 2: $WALLET1_BALANCE"
   fi
 
@@ -611,13 +611,13 @@ METRICS_HTTP=$(echo "$METRICS_RESPONSE" | tail -1)
 
 if [ "$METRICS_HTTP" = "200" ]; then
   pass "GET /metrics → 200"
-  # Contar métricas
-  METRIC_COUNT=$(echo "$METRICS_BODY" | grep -cP '^(jungle_|http_)' || echo "0")
+  # Contar métricas Prometheus (formato OpenMetrics: lines starting with metric name)
+  METRIC_COUNT=$(echo "$METRICS_BODY" | grep -cE '^(wager_|http_)' || echo "0")
   info "Métricas encontradas: $METRIC_COUNT"
   # Mostrar algumas métricas
   echo ""
   echo -e "  ${BOLD}Amostra de métricas:${NC}"
-  echo "$METRICS_BODY" | grep -P '^(jungle_|http_)' | head -8 | while read -r line; do
+  echo "$METRICS_BODY" | grep -E '^(wager_|http_)' | head -8 | while read -r line; do
     echo "    $line"
   done
   echo ""

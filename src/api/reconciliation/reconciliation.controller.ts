@@ -1,4 +1,4 @@
-import { Controller, Post, Param, UseFilters } from '@nestjs/common';
+import { Controller, Post, Param, UseFilters, HttpCode } from '@nestjs/common';
 import { ReconciliationResponseDto } from './dto/reconciliation-response.dto';
 import { BusinessExceptionFilter } from '../common/filters/business-exception.filter';
 import { ReconciliationService } from '@application/reconciliation/reconciliation.service';
@@ -10,6 +10,7 @@ export class ReconciliationController {
   constructor(private readonly reconciliationService: ReconciliationService) {}
 
   @Post(':walletId/reconciliation')
+  @HttpCode(200)
   @Roles(JungleRole.ADMIN, JungleRole.OPERATOR)
   async reconcile(
     @Param('walletId') walletId: string,

@@ -7,6 +7,7 @@ import {
   Headers,
   UseFilters,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { SubmitTransactionDto } from './dto/submit-transaction.dto';
 import {
@@ -16,6 +17,7 @@ import {
 import { BusinessExceptionFilter } from '../common/filters/business-exception.filter';
 import { IdempotencyKeyGuard } from '../common/guards/idempotency-key.guard';
 import { TransactionService } from '@application/wager/transaction.service';
+import { WagerTransactionStatus } from '@domain/transaction';
 import { Roles, JungleRole } from '@auth/decorators/roles.decorator';
 
 @Controller('wagering')
@@ -43,6 +45,10 @@ export class WageringController {
       moneyCurrency: dto.money.currency,
       referenceExternalTransactionId: dto.referenceExternalTransactionId,
     });
+
+    if (result.status === WagerTransactionStatus.Rejected) {
+      throw new BadRequestException('Transaction rejected: insufficient balance');
+    }
 
     return {
       transactionId: result.transactionId,
