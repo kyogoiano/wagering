@@ -4,45 +4,48 @@ import { SqsHealthIndicator } from './sqs.health.indicator';
 
 describe('Health Indicators', () => {
   describe('PostgresHealthIndicator', () => {
-    it('should return up when ORM connection works', async () => {
-      const mockOrm = {
+    it('should return up when connection works', async () => {
+      const mockEm = {
         getConnection: () => ({
           execute: async () => ({ rows: [] }),
         }),
       };
-      const indicator = new PostgresHealthIndicator(mockOrm as any);
+      const indicator = new PostgresHealthIndicator(mockEm as any);
       const result = await indicator.isHealthy();
       expect(result.status).toBe('up');
       expect(result.detail).toEqual({ postgresql: 'ok' });
     });
 
     it('should return down when connection fails', async () => {
-      const mockOrm = {
+      const mockEm = {
         getConnection: () => ({
           execute: async () => {
             throw new Error('Connection refused');
           },
         }),
       };
-      const indicator = new PostgresHealthIndicator(mockOrm as any);
+      const indicator = new PostgresHealthIndicator(mockEm as any);
       const result = await indicator.isHealthy();
       expect(result.status).toBe('down');
       expect(result.detail).toEqual({ postgresql: 'error' });
       expect(result.error).toContain('Connection refused');
     });
 
-    it('should return down when ORM is not configured', async () => {
+    it('should return down when EntityManager is not configured', async () => {
       const indicator = new PostgresHealthIndicator(undefined);
       const result = await indicator.isHealthy();
       expect(result.status).toBe('down');
       expect(result.detail).toEqual({ postgresql: 'not_configured' });
-      expect(result.error).toContain('MikroORM not configured');
+      expect(result.error).toContain('EntityManager not configured');
     });
   });
 
   describe('SqsHealthIndicator', () => {
     it('should return down when SQS client is not available', async () => {
-      const indicator = new SqsHealthIndicator();
+      const mockConfigService = {
+        get: (key: string, fallback?: string) => fallback || null,
+      };
+      const indicator = new SqsHealthIndicator(undefined, mockConfigService as any);
       const result = await indicator.isHealthy();
       expect(result.status).toBe('down');
       expect(result.detail).toEqual({ sqs: 'not_configured' });
@@ -55,9 +58,12 @@ describe('Health Indicators', () => {
           throw new Error('Connection refused');
         },
       };
+      const mockConfigService = {
+        get: (key: string, fallback?: string) => fallback || 'test.fifo',
+      };
       const indicator = new SqsHealthIndicator(
         mockSqsClient as any,
-        { queueName: 'test.fifo' },
+        mockConfigService as any,
       );
       const result = await indicator.isHealthy();
       expect(result.status).toBe('down');
@@ -71,9 +77,12 @@ describe('Health Indicators', () => {
           QueueUrl: 'http://localhost:4566/000000000000/test.fifo',
         }),
       };
+      const mockConfigService = {
+        get: (key: string, fallback?: string) => fallback || 'test.fifo',
+      };
       const indicator = new SqsHealthIndicator(
         mockSqsClient as any,
-        { queueName: 'test.fifo' },
+        mockConfigService as any,
       );
       const result = await indicator.isHealthy();
       expect(result.status).toBe('up');

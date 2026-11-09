@@ -1,6 +1,5 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
-import { MikroORM } from '@mikro-orm/core';
-import { getMikroORMToken } from '@mikro-orm/nestjs';
+import { EntityManager } from '@mikro-orm/core';
 
 export interface HealthIndicatorResult {
   status: 'up' | 'down';
@@ -12,20 +11,20 @@ export interface HealthIndicatorResult {
 export class PostgresHealthIndicator {
   constructor(
     @Optional()
-    @Inject(getMikroORMToken('default'))
-    private readonly orm?: MikroORM,
+    @Inject(EntityManager)
+    private readonly em?: EntityManager,
   ) {}
 
   async isHealthy(): Promise<HealthIndicatorResult> {
     try {
-      if (!this.orm) {
+      if (!this.em) {
         return {
           status: 'down',
           detail: { postgresql: 'not_configured' },
-          error: 'MikroORM not configured',
+          error: 'EntityManager not configured',
         };
       }
-      await this.orm.getConnection().execute('SELECT 1');
+      await this.em.getConnection().execute('SELECT 1');
       return {
         status: 'up',
         detail: { postgresql: 'ok' },

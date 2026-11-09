@@ -1,21 +1,30 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { OutboxMessageRepository } from '@infrastructure/persistence/outbox-message.repository';
+import { MikroORM } from '@mikro-orm/core';
 import { OutboxMessageEntity } from '@infrastructure/persistence/outbox-message.entity';
 
 @Injectable()
 export class OutboxPublisherWorker {
   private readonly logger = new Logger(OutboxPublisherWorker.name);
 
-  constructor(
-    private readonly outboxRepository: OutboxMessageRepository,
-  ) {}
+  constructor(private readonly orm: MikroORM) {}
 
   @Cron('*/15 * * * * *') // Every 15 seconds
   async publish(): Promise<void> {
+    const em = this.orm.em.fork();
     try {
       const now = new Date();
-      const pending = await this.outboxRepository.findPendingDue(now, 50);
+      const pending = await em.find(
+        OutboxMessageEntity,
+        {
+          publishedAt: null,
+          nextAttemptAt: { $lte: now },
+        },
+        {
+          limit: 50,
+          orderBy: { occurredAt: 'ASC' },
+        },
+      );
 
       if (pending.length === 0) {
         return;
@@ -24,14 +33,14 @@ export class OutboxPublisherWorker {
       this.logger.debug(`Found ${pending.length} pending outbox messages`);
 
       for (const message of pending) {
-        await this.publishMessage(message);
+        await this.publishMessage(em, message);
       }
     } catch (error) {
       this.logger.error(`Outbox publisher error: ${(error as Error).message}`, (error as Error).stack);
     }
   }
 
-  async publishMessage(message: OutboxMessageEntity): Promise<void> {
+  async publishMessage(em: any, message: OutboxMessageEntity): Promise<void> {
     try {
       // Publish event to destination (log by default, SQS if configured)
       this.logger.log(
@@ -40,7 +49,9 @@ export class OutboxPublisherWorker {
       );
 
       // Mark as published
-      await this.outboxRepository.markAsPublished(message);
+      message.publishedAt = new Date();
+      em.persist(message);
+      await em.flush();
 
       this.logger.debug(`Outbox event published: ${message.id}`);
     } catch (error) {
@@ -55,7 +66,10 @@ export class OutboxPublisherWorker {
         `Failed to publish outbox event ${message.id} (attempt ${attempts}): ${(error as Error).message}`,
       );
 
-      await this.outboxRepository.retryLater(message, attempts, nextAttemptAt);
+      message.attempts = attempts;
+      message.nextAttemptAt = nextAttemptAt;
+      em.persist(message);
+      await em.flush();
     }
   }
 }
