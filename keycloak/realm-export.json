@@ -75,7 +75,7 @@
       "username": "service-account-jungle-api",
       "enabled": true,
       "serviceAccountClientId": "jungle-api",
-      "roles": ["jungle-admin"]
+      "realmRoles": ["jungle-admin"]
     }
   ]
 }

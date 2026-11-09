@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Inject, Optional, ServiceUnavailableException } from '@nestjs/common';
 import { PostgresHealthIndicator } from '@infrastructure/observability/health/postgres.health.indicator';
 import { SqsHealthIndicator } from '@infrastructure/observability/health/sqs.health.indicator';
 import { Public } from '@auth/decorators/public.decorator';
@@ -8,7 +8,9 @@ import { Public } from '@auth/decorators/public.decorator';
 export class HealthController {
   constructor(
     private readonly postgresHealth: PostgresHealthIndicator,
-    private readonly sqsHealth: SqsHealthIndicator,
+    @Optional()
+    @Inject(SqsHealthIndicator)
+    private readonly sqsHealth: SqsHealthIndicator | null,
   ) {}
 
   @Get('live')
@@ -19,11 +21,11 @@ export class HealthController {
 
   @Get('ready')
   @HttpCode(HttpStatus.OK)
-  async getReady(): Promise<{ status: string; dependencies: Record<string, string> }> {
-    const [postgres, sqs] = await Promise.all([
-      this.postgresHealth.isHealthy(),
-      this.sqsHealth.isHealthy(),
-    ]);
+  async getReady(): Promise<{ status: string; dependencies: Record<string, string>; errors?: string[] }> {
+    const postgres = await this.postgresHealth.isHealthy();
+    const sqs = this.sqsHealth
+      ? await this.sqsHealth.isHealthy()
+      : { status: 'down', detail: { sqs: 'not_configured' }, error: 'SQS client not available' };
 
     const dependencies: Record<string, string> = {};
     if (postgres.detail) {

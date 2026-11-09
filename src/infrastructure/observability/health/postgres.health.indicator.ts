@@ -1,5 +1,6 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { MikroORM } from '@mikro-orm/core';
+import { getMikroORMToken } from '@mikro-orm/nestjs';
 
 export interface HealthIndicatorResult {
   status: 'up' | 'down';
@@ -9,7 +10,11 @@ export interface HealthIndicatorResult {
 
 @Injectable()
 export class PostgresHealthIndicator {
-  constructor(@Optional() @Inject('MikroORM') private readonly orm?: MikroORM) {}
+  constructor(
+    @Optional()
+    @Inject(getMikroORMToken('default'))
+    private readonly orm?: MikroORM,
+  ) {}
 
   async isHealthy(): Promise<HealthIndicatorResult> {
     try {

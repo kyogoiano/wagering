@@ -65,8 +65,8 @@ export async function applyMigrations(orm: MikroORM): Promise<void> {
   const migrationsDir = join(__dirname, '../../src/infrastructure/persistence/migrations');
   const migrationFiles = [
     '001_create_wallets.sql',
-    '004_create_inbox_outbox.sql',
-    '004_add_pending_reference_fields.sql',
+    '005_create_inbox_outbox.sql',
+    '006_add_pending_reference_fields.sql',
   ];
 
   const em = orm.em.fork();

@@ -24,22 +24,45 @@ export function createSqsClient(config: SqsConfig): SQSClient {
   });
 }
 
-export async function ensureQueuesExist(client: SQSClient, config: SqsConfig): Promise<void> {
-  // Create DLQ first
-  const dlqArn = await createQueueIfNotExists(client, config.dlqName);
+export async function ensureQueuesExist(
+  client: SQSClient,
+  config: SqsConfig,
+  options: { maxRetries?: number; retryDelayMs?: number } = {},
+): Promise<void> {
+  const { maxRetries = 5, retryDelayMs = 2000 } = options;
 
-  // Create main queue with redrive policy pointing to DLQ
-  const redrivePolicy = JSON.stringify({
-    deadLetterTargetArn: dlqArn,
-    maxReceiveCount: config.maxReceiveCount,
-  });
+  const attempt = async (): Promise<void> => {
+    // Create DLQ first
+    const dlqArn = await createQueueIfNotExists(client, config.dlqName);
 
-  await createQueueIfNotExists(client, config.queueName, {
-    'FifoQueue': 'true',
-    'ContentBasedDeduplication': 'true',
-    'VisibilityTimeout': String(config.visibilityTimeoutSeconds),
-    'RedrivePolicy': redrivePolicy,
-  });
+    // Create main queue with redrive policy pointing to DLQ
+    const redrivePolicy = JSON.stringify({
+      deadLetterTargetArn: dlqArn,
+      maxReceiveCount: config.maxReceiveCount,
+    });
+
+    await createQueueIfNotExists(client, config.queueName, {
+      'FifoQueue': 'true',
+      'ContentBasedDeduplication': 'true',
+      'VisibilityTimeout': String(config.visibilityTimeoutSeconds),
+      'RedrivePolicy': redrivePolicy,
+    });
+  };
+
+  let lastError: Error | null = null;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      await attempt();
+      return;
+    } catch (err) {
+      lastError = err as Error;
+      if (i < maxRetries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs * (i + 1)));
+      }
+    }
+  }
+
+  throw lastError || new Error('Failed to create SQS queues after retries');
 }
 
 async function createQueueIfNotExists(

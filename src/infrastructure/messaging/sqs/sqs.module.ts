@@ -7,6 +7,7 @@ import { createSqsClient, ensureQueuesExist } from './sqs-client.factory';
 import type { SqsConfig } from './sqs-client.factory';
 import { SqsConsumerService } from './consumer/sqs-consumer.service';
 import { OutboxPublisherWorker } from './outbox/outbox-publisher.worker';
+import { SqsHealthIndicator } from '@infrastructure/observability/health/sqs.health.indicator';
 import { InboxMessageRepository } from '@infrastructure/persistence/inbox-message.repository';
 import { OutboxMessageRepository } from '@infrastructure/persistence/outbox-message.repository';
 import { TransactionService } from '@application/wager/transaction.service';
@@ -44,12 +45,13 @@ export class SqsModule implements OnModuleInit {
         },
         SqsConsumerService,
         OutboxPublisherWorker,
+        SqsHealthIndicator,
         InboxMessageRepository,
         OutboxMessageRepository,
         TransactionService,
         IdempotencyService,
       ],
-      exports: [SQS_CLIENT_TOKEN, SqsConsumerService, OutboxPublisherWorker],
+      exports: [SQS_CLIENT_TOKEN, SqsConsumerService, OutboxPublisherWorker, SqsHealthIndicator],
     };
   }
 

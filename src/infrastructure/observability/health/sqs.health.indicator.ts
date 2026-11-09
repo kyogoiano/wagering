@@ -1,8 +1,7 @@
 import { Injectable, Inject, Optional } from '@nestjs/common';
 import { SQSClient, GetQueueUrlCommand } from '@aws-sdk/client-sqs';
 import { HealthIndicatorResult } from './postgres.health.indicator';
-
-const SQS_CLIENT_TOKEN = 'SQS_CLIENT_TOKEN';
+import { SQS_CLIENT_TOKEN } from '@infrastructure/messaging/sqs/sqs.tokens';
 
 interface SqsHealthConfig {
   queueName: string;
