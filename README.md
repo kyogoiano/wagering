@@ -111,6 +111,7 @@ Copie `.env.example` para `.env` e ajuste conforme necessário:
 | `bun test src/` | Executa testes de unidade |
 | `bun test test/http/` | Executa testes HTTP de integração (requer banco) |
 | `bun test test/integration/` | Executa testes de integração com banco |
+| `./scripts/smoke-test.sh` | Smoke test completo (25 testes: health, auth, wallets, wagering, ledger, reconciliation, metrics, RBAC) |
 
 ## API Endpoints
 
