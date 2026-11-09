@@ -1,7 +1,7 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 let correlationIdCounter = 0;
 
@@ -15,7 +15,7 @@ export class CorrelationIdInterceptor implements NestInterceptor {
       (request.headers['x-correlation-id'] as string) ||
       `corr-${Date.now()}-${++correlationIdCounter}`;
 
-    (request as Record<string, unknown>)['correlationId'] = correlationId;
+    (request as unknown as Record<string, unknown>)['correlationId'] = correlationId;
     response.setHeader('X-Correlation-Id', correlationId);
 
     return next.handle().pipe(

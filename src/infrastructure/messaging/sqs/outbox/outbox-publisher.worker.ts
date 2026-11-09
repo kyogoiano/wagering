@@ -43,9 +43,10 @@ export class OutboxPublisherWorker {
   async publishMessage(em: any, message: OutboxMessageEntity): Promise<void> {
     try {
       // Publish event to destination (log by default, SQS if configured)
+      const payload = typeof message.payload === 'string' ? JSON.parse(message.payload) : message.payload;
       this.logger.log(
-        `Publishing outbox event: ${message.type} (id: ${message.id})`,
-        JSON.parse(message.payload),
+        `Publishing outbox event: ${message.eventType} (id: ${message.id})`,
+        payload,
       );
 
       // Mark as published

@@ -3,6 +3,9 @@ import { EntityManager } from '@mikro-orm/postgresql';
 import { WalletRepository } from '@infrastructure/persistence/wallet.repository';
 import { WagerTransactionRepository } from '@infrastructure/persistence/wager-transaction.repository';
 import { WalletLedgerEntryRepository } from '@infrastructure/persistence/wallet-ledger-entry.repository';
+import { WalletEntity } from '@infrastructure/persistence/wallet.entity';
+import { WagerTransactionEntity } from '@infrastructure/persistence/wager-transaction.entity';
+import { WalletLedgerEntryEntity } from '@infrastructure/persistence/wallet-ledger-entry.entity';
 import { Money } from '@domain/money';
 import { Wallet } from '@domain/wallet';
 import {
@@ -61,9 +64,7 @@ export class WalletService {
       input.initialBalance.currency,
     );
     if (existing) {
-      throw new WalletAlreadyExistsError(
-        `Wallet already exists for player ${input.playerId} with currency ${input.initialBalance.currency}`,
-      );
+      throw new WalletAlreadyExistsError(input.playerId, input.initialBalance.currency);
     }
 
     const walletId = crypto.randomUUID();
@@ -76,7 +77,7 @@ export class WalletService {
     const state = wallet.toJSON();
 
     // Persist wallet entity
-    const walletEntity = this.em.create('WalletEntity', {
+    const walletEntity = Object.assign(new WalletEntity(), {
       id: walletId,
       playerId: input.playerId,
       currency: state.currency,
@@ -84,12 +85,12 @@ export class WalletService {
       version: state.version,
     });
 
-    await this.walletRepository.create(walletEntity);
+    await this.walletRepository.persistAndFlush(walletEntity);
 
     // If there's an opening balance, create OPENING transaction and ledger entry
     if (input.initialBalance.isGreaterThan(Money.from({ amount: '0', currency: input.initialBalance.currency }))) {
       const txId = crypto.randomUUID();
-      const txEntity = this.em.create('WagerTransactionEntity', {
+      const txEntity = Object.assign(new WagerTransactionEntity(), {
         id: txId,
         providerId: 'system',
         externalTransactionId: `opening-${walletId}`,
@@ -105,7 +106,7 @@ export class WalletService {
         status: WagerTransactionStatus.Processed,
         processedAt: new Date(),
       });
-      await this.transactionRepository.create(txEntity);
+      await this.transactionRepository.persistAndFlush(txEntity);
 
       const ledgerEntry = WalletLedgerEntry.create({
         id: crypto.randomUUID(),
@@ -119,7 +120,7 @@ export class WalletService {
       });
       const ledgerState = ledgerEntry.toJSON();
 
-      const ledgerEntity = this.em.create('WalletLedgerEntryEntity', {
+      const ledgerEntity = Object.assign(new WalletLedgerEntryEntity(), {
         id: ledgerState.id,
         walletId,
         transactionId: txId,
@@ -129,7 +130,7 @@ export class WalletService {
         balanceBefore: ledgerState.balanceBefore,
         balanceAfter: ledgerState.balanceAfter,
       });
-      await this.ledgerRepository.create(ledgerEntity);
+      await this.ledgerRepository.persistAndFlush(ledgerEntity);
     }
 
     await this.em.flush();

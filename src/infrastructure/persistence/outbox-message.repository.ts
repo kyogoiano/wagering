@@ -25,8 +25,7 @@ export class OutboxMessageRepository extends EntityRepository<OutboxMessageEntit
       [now, limit],
     );
     return result.map((row: any) => {
-      const entity = new this.class();
-      Object.assign(entity, row);
+      const entity = this.em.create(OutboxMessageEntity, row);
       return entity;
     });
   }

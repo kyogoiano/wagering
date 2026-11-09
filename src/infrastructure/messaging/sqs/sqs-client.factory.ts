@@ -72,7 +72,8 @@ async function createQueueIfNotExists(
 ): Promise<string> {
   try {
     const queueUrlResult = await client.send(new GetQueueUrlCommand({ QueueName: queueName }));
-    return queueUrlResult.QueueArn || await getQueueArn(client, queueUrlResult.QueueUrl!);
+    const queueUrl = queueUrlResult.QueueUrl!;
+    return getQueueArn(client, queueUrl);
   } catch {
     // Queue doesn't exist, create it
     const attrs: Record<string, string> = { ...attributes };
@@ -88,11 +89,11 @@ async function createQueueIfNotExists(
       }),
     );
 
-    if (!result.QueueUrl || !result.QueueArn) {
+    if (!result.QueueUrl) {
       throw new Error(`Failed to create queue ${queueName}`);
     }
 
-    return result.QueueArn;
+    return getQueueArn(client, result.QueueUrl);
   }
 }
 

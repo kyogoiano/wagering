@@ -78,7 +78,7 @@ class JwksCache {
             key: { kty: key.kty, n: key.n, e: key.e },
             format: 'jwk',
           });
-          const pem = pubKey.export({ format: 'pem', type: 'spki' });
+          const pem = pubKey.export({ format: 'pem', type: 'spki' }) as string;
           this.keys.set(key.kid, pem);
         }
       }

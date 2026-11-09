@@ -30,21 +30,35 @@ describe('sqs-client.factory', () => {
         callCount++;
         // Call 1: GetQueueUrl for DLQ — fails
         // Call 2: CreateQueue for DLQ — succeeds
-        // Call 3: GetQueueUrl for main — fails
-        // Call 4: CreateQueue for main — succeeds
-        if (callCount === 1 || callCount === 3) {
+        // Call 3: GetQueueAttributes for DLQ ARN
+        // Call 4: GetQueueUrl for main — fails
+        // Call 5: CreateQueue for main — succeeds
+        // Call 6: GetQueueAttributes for main ARN
+        if (callCount === 1 || callCount === 4) {
           throw new Error('Queue does not exist');
         }
         if (callCount === 2) {
           return Promise.resolve({
             QueueUrl: 'http://localhost:4566/000000000000/wager-transactions-dlq.fifo',
-            QueueArn: 'arn:aws:sqs:us-east-1:000000000000:wager-transactions-dlq.fifo',
           });
         }
-        if (callCount === 4) {
+        if (callCount === 3) {
+          return Promise.resolve({
+            Attributes: {
+              QueueArn: 'arn:aws:sqs:us-east-1:000000000000:wager-transactions-dlq.fifo',
+            },
+          });
+        }
+        if (callCount === 5) {
           return Promise.resolve({
             QueueUrl: 'http://localhost:4566/000000000000/wager-transactions.fifo',
-            QueueArn: 'arn:aws:sqs:us-east-1:000000000000:wager-transactions.fifo',
+          });
+        }
+        if (callCount === 6) {
+          return Promise.resolve({
+            Attributes: {
+              QueueArn: 'arn:aws:sqs:us-east-1:000000000000:wager-transactions.fifo',
+            },
           });
         }
         return Promise.resolve({});
@@ -53,7 +67,7 @@ describe('sqs-client.factory', () => {
       const client = { send: mockSend } as any as SQSClient;
       await ensureQueuesExist(client, config);
 
-      expect(callCount).toBe(4);
+      expect(callCount).toBe(6);
       // Verify CreateQueueCommand was called twice (DLQ + main)
       const createQueueCalls = mockSend.mock.calls.filter(
         (call) => call[0].constructor.name === 'CreateQueueCommand',
@@ -62,18 +76,45 @@ describe('sqs-client.factory', () => {
     });
 
     it('should skip creation when queues already exist', async () => {
-      const mockSend = mock(() =>
-        Promise.resolve({
-          QueueUrl: 'http://localhost:4566/000000000000/wager-transactions.fifo',
-          QueueArn: 'arn:aws:sqs:us-east-1:000000000000:wager-transactions.fifo',
-        }),
-      );
+      let callCount = 0;
+      const mockSend = mock(() => {
+        callCount++;
+        // Call 1: GetQueueUrl for DLQ — succeeds
+        // Call 2: GetQueueAttributes for DLQ ARN
+        // Call 3: GetQueueUrl for main — succeeds
+        // Call 4: GetQueueAttributes for main ARN
+        if (callCount === 1) {
+          return Promise.resolve({
+            QueueUrl: 'http://localhost:4566/000000000000/wager-transactions-dlq.fifo',
+          });
+        }
+        if (callCount === 2) {
+          return Promise.resolve({
+            Attributes: {
+              QueueArn: 'arn:aws:sqs:us-east-1:000000000000:wager-transactions-dlq.fifo',
+            },
+          });
+        }
+        if (callCount === 3) {
+          return Promise.resolve({
+            QueueUrl: 'http://localhost:4566/000000000000/wager-transactions.fifo',
+          });
+        }
+        if (callCount === 4) {
+          return Promise.resolve({
+            Attributes: {
+              QueueArn: 'arn:aws:sqs:us-east-1:000000000000:wager-transactions.fifo',
+            },
+          });
+        }
+        return Promise.resolve({});
+      });
 
       const client = { send: mockSend } as any as SQSClient;
       await ensureQueuesExist(client, config);
 
-      // Only GetQueueUrl calls, no CreateQueue
-      expect(mockSend.mock.calls.length).toBe(2);
+      // GetQueueUrl + GetQueueAttributes for each queue = 4 calls
+      expect(mockSend.mock.calls.length).toBe(4);
     });
   });
 });
